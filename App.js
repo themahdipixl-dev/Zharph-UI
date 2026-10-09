@@ -38,6 +38,7 @@ export default function App() {
   const liquidStretch = useRef(new Animated.Value(1)).current;
   const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
+  const [popupMounted, setPopupMounted] = useState(false);
   const popupProgress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
@@ -72,7 +73,11 @@ export default function App() {
       speed: 16,
       bounciness: 14,
       useNativeDriver: true
-    }).start();
+    }).start(({ finished }) => {
+      // Unmount after the original closing animation completes, so a settled
+      // Animated.View cannot be painted again by a later render.
+      if (finished && !addPopupVisible) setPopupMounted(false);
+    });
   }, [addPopupVisible, popupProgress]);
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
@@ -101,12 +106,14 @@ export default function App() {
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
         </View>
-        <>
-          <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, { opacity: popupProgress }]} >
+        {popupMounted && <>
+          <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
+            opacity: popupProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: "clamp" })
+          }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddPopupVisible(false)} />
           </Animated.View>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
-            opacity: popupProgress,
+            opacity: popupProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: "clamp" }),
             transform: [
               { translateY: popupProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) },
               { scaleX: popupProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) },
@@ -115,10 +122,10 @@ export default function App() {
           }]}>
             <Pressable onPress={addPhoto} style={s.addPopupAction}><Text style={s.addPopupText}>Open Gallery</Text></Pressable>
           </Animated.View>
-        </>
+        </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }] }]} />
-          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");setAddPopupVisible(v=>!v);}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}
+          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
