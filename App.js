@@ -39,6 +39,7 @@ export default function App() {
   const liquidTapX = useRef(new Animated.Value(1)).current;
   const liquidTapY = useRef(new Animated.Value(1)).current;
   const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
+  const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
   const popupProgress = useRef(new Animated.Value(0)).current;
@@ -86,6 +87,14 @@ export default function App() {
       }).start();
     });
   }, [navTab, iconScales]);
+  useEffect(() => {
+    addIconRotation.stopAnimation();
+    Animated.timing(addIconRotation, {
+      toValue: addPopupVisible ? 1 : 0,
+      duration: 260,
+      useNativeDriver: true
+    }).start();
+  }, [addPopupVisible, addIconRotation]);
   useEffect(() => {
     // Opacity is independent from the elastic spring so its rebound cannot
     // briefly reveal a tiny, faded capsule at the end of closing.
@@ -152,7 +161,7 @@ export default function App() {
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
-          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}
+          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
