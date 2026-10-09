@@ -3,8 +3,8 @@ import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animat
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { HouseIcon, StackIcon, PlusIcon, BookmarkSimpleIcon, GearIcon } from "phosphor-react-native";
+import { useFonts } from "@expo-google-fonts/material-symbols-rounded/useFonts";
+import { MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded/400Regular";
 
 const C = {
   bg: "#111216", surface: "#1B1C22", surface2: "#24252D",
@@ -20,11 +20,17 @@ const items = [
   ["Soft horizon", "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=700&auto=format&fit=crop&q=85"]
 ];
 const tabs = [
-  ["Home", HouseIcon], ["Depth", StackIcon],
-  ["Add", PlusIcon], ["Saved", BookmarkSimpleIcon], ["Settings", GearIcon]
+  ["Home", "home"], ["Depth", "layers"],
+  ["Add", "add"], ["Saved", "bookmark"], ["Settings", "settings"]
 ];
 
+function GoogleSymbol({ name, size = 24, color, style }) {
+  return <Text accessibilityLabel={name} style={[{ fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size * 1.2, color, textAlign: "center", includeFontPadding: false }, style]}>{name}</Text>;
+}
+
 export default function App() {
+  const [fontsLoaded] = useFonts({ MaterialSymbolsRounded_400Regular });
+
   useEffect(() => {
     NavigationBar.setStyle("light");
     NavigationBar.setButtonStyleAsync("dark").catch(() => {});
@@ -123,6 +129,8 @@ export default function App() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
     if (!result.canceled && result.assets?.[0]?.uri) setUserImages(prev => [result.assets[0].uri, ...prev]);
   };
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
@@ -140,7 +148,7 @@ export default function App() {
               {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
               {items.map(([title,uri])=><Pressable key={title} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
             </View>
-            </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
+            </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={tab==="Depth"?"layers":tab==="Saved"?"bookmark":tab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
         </View>
         {popupMounted && <>
@@ -162,7 +170,7 @@ export default function App() {
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
-          {tabs.map(([name,Icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><Icon size={25} color={active?C.onPrimary:C.muted} weight={active ? "fill" : "regular"}/></Animated.View></Animated.View></Pressable>})}
+          {tabs.map(([name, iconName])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><GoogleSymbol name={iconName} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
