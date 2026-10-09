@@ -36,6 +36,8 @@ export default function App() {
   const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
   const liquidX = useRef(new Animated.Value(0)).current;
   const liquidStretch = useRef(new Animated.Value(1)).current;
+  const liquidTapX = useRef(new Animated.Value(1)).current;
+  const liquidTapY = useRef(new Animated.Value(1)).current;
   const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
@@ -58,6 +60,22 @@ export default function App() {
       ])
     ]).start();
   }, [navTab, slotWidth, liquidX, liquidStretch]);
+  const animateLiquidTap = () => {
+    liquidTapX.stopAnimation();
+    liquidTapY.stopAnimation();
+    liquidTapX.setValue(1);
+    liquidTapY.setValue(1);
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(liquidTapX, { toValue: 1.2, duration: 85, useNativeDriver: true }),
+        Animated.spring(liquidTapX, { toValue: 1, speed: 13, bounciness: 13, useNativeDriver: true })
+      ]),
+      Animated.sequence([
+        Animated.timing(liquidTapY, { toValue: 0.82, duration: 85, useNativeDriver: true }),
+        Animated.spring(liquidTapY, { toValue: 1, speed: 13, bounciness: 13, useNativeDriver: true })
+      ])
+    ]).start();
+  };
   useEffect(() => {
     tabs.forEach(([name]) => {
       Animated.spring(iconScales[name], {
@@ -133,8 +151,8 @@ export default function App() {
           </Animated.View>
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
-          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }] }]} />
-          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}
+          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
+          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
