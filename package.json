@@ -22,7 +22,7 @@
     "expo-navigation-bar": "~55.0.17",
     "react-native-svg": "15.15.3",
     "expo-font": "~55.0.8",
-    "@material-symbols-svg/react-native": "0.13.0"
+    "@expo-google-fonts/material-symbols-rounded": "^0.4.55"
   },
   "devDependencies": {
     "expo-doctor": "^1.17.0"
