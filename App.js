@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animat
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
-import { useFonts, MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded";
+import { Ms } from "@material-symbols-framework/react-native";
 
 const C = {
   bg: "#111216", surface: "#1B1C22", surface2: "#24252D",
@@ -24,12 +24,10 @@ const tabs = [
 ];
 
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
-  return <Text accessibilityLabel={name} style={[{ fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size * 1.2, color, textAlign: "center", includeFontPadding: false }, style]}>{name}</Text>;
+  return <Ms icon={name} variant="rounded" fill={filled} size={size} color={color} style={style} />;
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ MaterialSymbolsRounded_400Regular });
-
   useEffect(() => {
     NavigationBar.setStyle("light");
     NavigationBar.setButtonStyleAsync("dark").catch(() => {});
@@ -128,8 +126,6 @@ export default function App() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
     if (!result.canceled && result.assets?.[0]?.uri) setUserImages(prev => [result.assets[0].uri, ...prev]);
   };
-  if (!fontsLoaded) return null;
-
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
