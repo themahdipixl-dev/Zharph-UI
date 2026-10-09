@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { LayoutGrid, Layers3, Plus, Bookmark, Settings } from "lucide-react-native";
+import { HouseIcon, StackIcon, PlusIcon, BookmarkSimpleIcon, GearIcon } from "phosphor-react-native";
 
 const C = {
   bg: "#111216", surface: "#1B1C22", surface2: "#24252D",
@@ -20,8 +20,8 @@ const items = [
   ["Soft horizon", "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=700&auto=format&fit=crop&q=85"]
 ];
 const tabs = [
-  ["Home", LayoutGrid], ["Depth", Layers3],
-  ["Add", Plus], ["Saved", Bookmark], ["Settings", Settings]
+  ["Home", HouseIcon], ["Depth", StackIcon],
+  ["Add", PlusIcon], ["Saved", BookmarkSimpleIcon], ["Settings", GearIcon]
 ];
 
 export default function App() {
@@ -162,7 +162,7 @@ export default function App() {
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
-          {tabs.map(([name,Icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><Icon width={25} height={25} color={active?C.onPrimary:C.muted} strokeWidth={2}/></Animated.View></Animated.View></Pressable>})}
+          {tabs.map(([name,Icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><Icon size={25} color={active?C.onPrimary:C.muted} weight={active ? "fill" : "regular"}/></Animated.View></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
