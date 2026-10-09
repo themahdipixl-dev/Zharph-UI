@@ -30,15 +30,19 @@ export default function App() {
     NavigationBar.setBackgroundColorAsync("#F3EDF7").catch(() => {});
   }, []);
   const [tab, setTab] = useState("Home");
+  const [navTab, setNavTab] = useState("Home");
+  const [barWidth, setBarWidth] = useState(0);
+  const slotWidth = barWidth > 0 ? (barWidth - 18) / tabs.length : 0;
+  const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
   const liquidX = useRef(new Animated.Value(0)).current;
   const liquidStretch = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const activeIndex = tabs.findIndex(([name]) => name === tab);
+    const activeIndex = tabs.findIndex(([name]) => name === navTab);
     if (activeIndex < 0) return;
     const slot = activeIndex;
     Animated.parallel([
       Animated.spring(liquidX, {
-        toValue: slot * 52,
+        toValue: slot * slotWidth,
         speed: 14,
         bounciness: 9,
         useNativeDriver: true
@@ -48,7 +52,7 @@ export default function App() {
         Animated.spring(liquidStretch, { toValue: 1, speed: 12, bounciness: 10, useNativeDriver: true })
       ])
     ]).start();
-  }, [tab, liquidX, liquidStretch]);
+  }, [navTab, slotWidth, liquidX, liquidStretch]);
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const addPhoto = async () => {
@@ -75,9 +79,9 @@ export default function App() {
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
         </View>
-        <View style={s.bar}>
-          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { transform: [{ translateX: liquidX }, { scaleX: liquidStretch }] }]} />
-          {tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>name==="Add"?addPhoto():setTab(name)} style={s.tab}><View style={s.pill}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></View></Pressable>})}
+        <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
+          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ scaleX: liquidStretch }, { translateX: liquidX }] }]} />
+          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");addPhoto();}else{setTab(name);setNavTab(name);}}} style={s.tab}><View style={s.pill}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
@@ -89,6 +93,6 @@ const s=StyleSheet.create({
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},
- bar:{position:"relative",flexDirection:"row",justifyContent:"space-between",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{width:52,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",left:7,top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
+ bar:{position:"relative",flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
