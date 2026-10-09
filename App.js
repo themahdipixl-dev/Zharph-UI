@@ -1,8 +1,62 @@
-// Snack-compatible entry point.
-// The full app continues to use Expo Router in the native project.
-// This entry renders the Home screen so Snack can import and preview the UI.
-import HomeScreen from "./app/index";
+import React, { useState } from "react";
+import { SafeAreaView, View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+const C = {
+  bg: "#111216", surface: "#1B1C22", surface2: "#24252D",
+  primary: "#D0BCFF", onPrimary: "#381E72", text: "#E6E1E9",
+  muted: "#C5C0D0", outline: "#34343D"
+};
+const items = [
+  ["Alpine dusk", "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=700&auto=format&fit=crop&q=85"],
+  ["Quiet coast", "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=700&auto=format&fit=crop&q=85"],
+  ["Blue hour", "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=700&auto=format&fit=crop&q=85"],
+  ["Desert lines", "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=700&auto=format&fit=crop&q=85"],
+  ["Forest light", "https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&auto=format&fit=crop&q=85"],
+  ["Soft horizon", "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=700&auto=format&fit=crop&q=85"]
+];
+const tabs = [
+  ["Home", "view-grid-outline"], ["Depth", "layers-triple-outline"],
+  ["Saved", "bookmark-outline"], ["Settings", "cog-outline"]
+];
 
 export default function App() {
-  return <HomeScreen />;
+  const [tab, setTab] = useState("Home");
+  const [filter, setFilter] = useState("All");
+  return (
+    <SafeAreaView style={s.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <View style={s.root}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+          <View style={s.header}>
+            <View><Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text><Text style={s.subtitle}>Your screen, reimagined</Text></View>
+            <Pressable style={s.avatar} onPress={() => setTab("Settings")}><MaterialCommunityIcons name="tune-variant" size={22} color={C.text}/></Pressable>
+          </View>
+          {tab === "Home" ? <>
+            <View style={s.section}><Text style={s.title}>Discover</Text><Pressable onPress={() => setTab("Depth")} style={s.action}><Text style={s.actionText}>Make depth</Text><MaterialCommunityIcons name="arrow-up-right" size={17} color={C.primary}/></Pressable></View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>
+              {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
+            </ScrollView>
+            <View style={s.grid}>
+              <Pressable style={s.card} onPress={()=>setTab("Depth")}><View style={s.add}><MaterialCommunityIcons name="plus" size={32} color={C.primary}/></View><Text style={s.cardLabel}>Add photo</Text></Pressable>
+              {items.map(([title,uri])=><Pressable key={title} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/><Text numberOfLines={1} style={s.cardLabel}>{title}</Text></Pressable>)}
+            </View>
+            <View style={s.tip}><View style={s.tipIcon}><MaterialCommunityIcons name="auto-awesome" size={20} color={C.primary}/></View><View style={{flex:1}}><Text style={s.tipTitle}>Give your wallpaper depth</Text><Text style={s.tipText}>Bring the foreground in front of your lock-screen clock.</Text></View><MaterialCommunityIcons name="chevron-right" size={22} color={C.muted}/></View>
+          </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
+        </ScrollView>
+        <View style={s.bar}>{tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>setTab(name)} style={s.tab}><View style={[s.pill,active&&s.pillOn]}><MaterialCommunityIcons name={active?({Home:"view-grid",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]):icon} size={22} color={active?C.onPrimary:C.muted}/></View><Text style={[s.tabLabel,active&&{color:C.text,fontWeight:"700"}]}>{name}</Text></Pressable>})}</View>
+      </View>
+    </SafeAreaView>
+  );
 }
+const s=StyleSheet.create({
+ safe:{flex:1,backgroundColor:C.bg},root:{flex:1,backgroundColor:C.bg},scroll:{paddingHorizontal:20,paddingTop:12,paddingBottom:18},
+ header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:28},brand:{color:C.text,fontSize:30,fontWeight:"800",letterSpacing:-1.2},subtitle:{color:C.muted,fontSize:12,marginTop:3,letterSpacing:.2},
+ avatar:{width:46,height:46,borderRadius:23,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:C.outline},
+ section:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:14},title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},action:{flexDirection:"row",alignItems:"center",gap:3},actionText:{color:C.primary,fontSize:13,fontWeight:"600"},
+ filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
+ grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},add:{width:"100%",aspectRatio:.64,borderRadius:16,borderWidth:1.5,borderStyle:"dashed",borderColor:C.primary,backgroundColor:C.surface,alignItems:"center",justifyContent:"center"},cardLabel:{color:C.text,fontSize:11,fontWeight:"600",marginTop:7},
+ tip:{flexDirection:"row",alignItems:"center",gap:12,padding:14,marginTop:22,borderRadius:20,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},tipIcon:{width:40,height:40,borderRadius:14,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center"},tipTitle:{color:C.text,fontWeight:"700",fontSize:13},tipText:{color:C.muted,fontSize:11,lineHeight:16,marginTop:4},
+ bar:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",backgroundColor:C.surface,borderRadius:28,marginHorizontal:16,marginTop:8,marginBottom:8,paddingHorizontal:5,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",gap:4},pill:{minWidth:56,height:32,borderRadius:18,alignItems:"center",justifyContent:"center"},pillOn:{backgroundColor:C.primary},tabLabel:{fontSize:11,color:C.muted,fontWeight:"500"},
+ placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
+});
