@@ -36,6 +36,9 @@ export default function App() {
   const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
   const liquidX = useRef(new Animated.Value(0)).current;
   const liquidStretch = useRef(new Animated.Value(1)).current;
+  const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
+  const [addPopupVisible, setAddPopupVisible] = useState(false);
+  const popupProgress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
     if (activeIndex < 0) return;
@@ -53,9 +56,28 @@ export default function App() {
       ])
     ]).start();
   }, [navTab, slotWidth, liquidX, liquidStretch]);
+  useEffect(() => {
+    tabs.forEach(([name]) => {
+      Animated.spring(iconScales[name], {
+        toValue: navTab === name ? 1.16 : 1,
+        speed: 18,
+        bounciness: 10,
+        useNativeDriver: true
+      }).start();
+    });
+  }, [navTab, iconScales]);
+  useEffect(() => {
+    Animated.spring(popupProgress, {
+      toValue: addPopupVisible ? 1 : 0,
+      speed: 20,
+      bounciness: 7,
+      useNativeDriver: true
+    }).start();
+  }, [addPopupVisible, popupProgress]);
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const addPhoto = async () => {
+    setAddPopupVisible(false);
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
     if (!result.canceled && result.assets?.[0]?.uri) setUserImages(prev => [result.assets[0].uri, ...prev]);
   };
@@ -79,9 +101,16 @@ export default function App() {
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
         </View>
+        {addPopupVisible && <>
+          <Pressable style={s.popupDismiss} onPress={() => setAddPopupVisible(false)} />
+          <Animated.View style={[s.addPopup, { opacity: popupProgress, transform: [{ translateY: popupProgress.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }, { scale: popupProgress.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] }]}>
+            <MaterialCommunityIcons name="image-plus-outline" size={21} color={C.onPrimary} />
+            <Pressable onPress={addPhoto} style={s.addPopupAction}><Text style={s.addPopupText}>Choose from gallery</Text></Pressable>
+          </Animated.View>
+        </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }] }]} />
-          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");addPhoto();}else{setTab(name);setNavTab(name);}}} style={s.tab}><View style={s.pill}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></View></Pressable>})}
+          {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");setAddPopupVisible(v=>!v);}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
@@ -93,6 +122,6 @@ const s=StyleSheet.create({
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},
- bar:{position:"relative",flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
+ popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,flexDirection:"row",alignItems:"center",gap:10,backgroundColor:C.primary,borderRadius:22,paddingHorizontal:16,paddingVertical:12,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"relative",flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
