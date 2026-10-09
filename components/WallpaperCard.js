@@ -27,14 +27,14 @@ export default function WallpaperCard({ item, onPress, isAdd = false }) {
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, height: 184, borderRadius: 18, overflow: "hidden", backgroundColor: theme.surface2 },
+  card: { width: "31.5%", height: 184, borderRadius: 18, overflow: "hidden", backgroundColor: theme.surface2 },
   image: { width: "100%", height: "100%" },
   imageShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(8,8,12,0.12)" },
   cardBadge: { position: "absolute", top: 8, right: 8, width: 27, height: 27, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(16,16,20,0.52)" },
   caption: { position: "absolute", left: 9, right: 6, bottom: 10 },
   title: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
   category: { color: "#E1DDE8", fontSize: 10, marginTop: 3 },
-  addCard: { flex: 1, height: 184, borderRadius: 18, borderWidth: 1.5, borderColor: theme.outline, borderStyle: "dashed", backgroundColor: theme.surface, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  addCard: { width: "31.5%", height: 184, borderRadius: 18, borderWidth: 1.5, borderColor: theme.outline, borderStyle: "dashed", backgroundColor: theme.surface, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
   addIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.primary, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   addTitle: { color: theme.text, fontSize: 12, fontWeight: "700" },
   addSub: { color: theme.muted, fontSize: 10, marginTop: 5, textAlign: "center" },
