@@ -20,13 +20,15 @@ export default function EditorScreen() {
     { name: "Background", detail: "Base photo", icon: "image-outline" }
   ]);
   const pan = useRef({ x: 0, y: 0 });
+  const clockRef = useRef(clock);
+  clockRef.current = clock;
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => { pan.current = { ...clock }; },
+    onPanResponderGrant: () => { pan.current = { ...clockRef.current }; },
     onPanResponderMove: (_, gesture) => setClock({ x: pan.current.x + gesture.dx, y: pan.current.y + gesture.dy }),
-    onPanResponderRelease: () => { pan.current = { ...clock }; }
-  }), [clock]);
+    onPanResponderRelease: (_, gesture) => { pan.current = { x: pan.current.x + gesture.dx, y: pan.current.y + gesture.dy }; }
+  }), []);
   const toggleLayer = (name) => setActiveLayer(name);
   const moveLayer = (name, direction) => setLayers((old) => {
     const i = old.findIndex((layer) => layer.name === name);
