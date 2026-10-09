@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, useRef } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
