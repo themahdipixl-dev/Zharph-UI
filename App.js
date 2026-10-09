@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
+import * as ImagePicker from "expo-image-picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const C = {
@@ -19,7 +20,7 @@ const items = [
 ];
 const tabs = [
   ["Home", "view-dashboard-variant-outline"], ["Depth", "layers-triple-outline"],
-  ["Saved", "bookmark-outline"], ["Settings", "cog-outline"]
+  ["Add", "plus"], ["Saved", "bookmark-outline"], ["Settings", "cog-outline"]
 ];
 
 export default function App() {
@@ -30,6 +31,11 @@ export default function App() {
   }, []);
   const [tab, setTab] = useState("Home");
   const [filter, setFilter] = useState("All");
+  const [userImages, setUserImages] = useState([]);
+  const addPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
+    if (!result.canceled && result.assets?.[0]?.uri) setUserImages(prev => [result.assets[0].uri, ...prev]);
+  };
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
@@ -43,12 +49,12 @@ export default function App() {
               {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
             </ScrollView>
             <View style={s.grid}>
-              <Pressable style={s.card} onPress={()=>setTab("Depth")}><View style={s.add}><MaterialCommunityIcons name="plus" size={32} color={C.primary}/></View></Pressable>
+              {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
               {items.map(([title,uri])=><Pressable key={title} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
             </View>
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
-        <View style={s.bar}>{tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>setTab(name)} style={s.tab}><View style={[s.pill,active&&s.pillOn]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]):icon} size={22} color={active?C.onPrimary:C.muted}/></View></Pressable>})}</View>
+        <View style={s.bar}>{tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>name==="Add"?addPhoto():setTab(name)} style={s.tab}><View style={[s.pill,active&&s.pillOn,name==="Add"&&s.addPill]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={22} color={active?C.onPrimary:C.muted}/></View></Pressable>})}</View>
       </View>
     </SafeAreaView>
   );
@@ -59,6 +65,6 @@ const s=StyleSheet.create({
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},add:{width:"100%",aspectRatio:.64,borderRadius:16,borderWidth:1.5,borderStyle:"dashed",borderColor:C.primary,backgroundColor:C.surface,alignItems:"center",justifyContent:"center"},
- bar:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:5,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch"},pill:{width:56,height:44,borderRadius:999,overflow:"hidden",alignItems:"center",justifyContent:"center"},pillOn:{backgroundColor:C.primary},
+ bar:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:5,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch"},pill:{width:48,height:44,borderRadius:999,overflow:"hidden",alignItems:"center",justifyContent:"center"},pillOn:{backgroundColor:C.primary},addPill:{width:48,height:44,backgroundColor:C.surface2,borderWidth:1,borderColor:C.outline},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
