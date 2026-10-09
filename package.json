@@ -20,8 +20,8 @@
     "react-native": "0.83.1",
     "react-native-safe-area-context": "~5.6.2",
     "expo-navigation-bar": "~55.0.17",
-    "lucide-react-native": "^0.468.0",
-    "react-native-svg": "15.15.3"
+    "react-native-svg": "15.15.3",
+    "phosphor-react-native": "^3.0.6"
   },
   "devDependencies": {
     "expo-doctor": "^1.17.0"
