@@ -36,11 +36,9 @@ export default function App() {
       <View style={s.root}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
           <View style={s.header}>
-            <View><Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text><Text style={s.subtitle}>Your screen, reimagined</Text></View>
-            <Pressable style={s.avatar} onPress={() => setTab("Settings")}><MaterialCommunityIcons name="tune-variant" size={22} color={C.text}/></Pressable>
+            <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
           </View>
           {tab === "Home" ? <>
-            <View style={s.section}><Text style={s.title}>Discover</Text><Pressable onPress={() => setTab("Depth")} style={s.action}><Text style={s.actionText}>Make depth</Text><MaterialCommunityIcons name="arrow-up-right" size={17} color={C.primary}/></Pressable></View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>
               {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
             </ScrollView>
@@ -57,13 +55,13 @@ export default function App() {
   );
 }
 const s=StyleSheet.create({
- safe:{flex:1,backgroundColor:C.bg},root:{flex:1,backgroundColor:C.bg},scroll:{paddingHorizontal:20,paddingTop:24,paddingBottom:22},
- header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:28},brand:{color:C.text,fontSize:30,fontWeight:"800",letterSpacing:-1.2},subtitle:{color:C.muted,fontSize:12,marginTop:3,letterSpacing:.2},
+ safe:{flex:1,backgroundColor:C.bg},root:{flex:1,backgroundColor:C.bg},scroll:{paddingHorizontal:20,paddingTop:8,paddingBottom:16},
+ header:{flexDirection:"row",alignItems:"center",marginBottom:20},brand:{color:C.text,fontSize:30,fontWeight:"800",letterSpacing:-1.2},subtitle:{color:C.muted,fontSize:12,marginTop:3,letterSpacing:.2},
  avatar:{width:46,height:46,borderRadius:23,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:C.outline},
  section:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:14},title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},action:{flexDirection:"row",alignItems:"center",gap:3},actionText:{color:C.primary,fontSize:13,fontWeight:"600"},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},add:{width:"100%",aspectRatio:.64,borderRadius:16,borderWidth:1.5,borderStyle:"dashed",borderColor:C.primary,backgroundColor:C.surface,alignItems:"center",justifyContent:"center"},
  tip:{flexDirection:"row",alignItems:"center",gap:12,padding:14,marginTop:22,borderRadius:20,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},tipIcon:{width:40,height:40,borderRadius:14,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center"},tipTitle:{color:C.text,fontWeight:"700",fontSize:13},tipText:{color:C.muted,fontSize:11,lineHeight:16,marginTop:4},
- bar:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",backgroundColor:C.surface,borderRadius:28,marginHorizontal:16,marginTop:4,marginBottom:14,paddingHorizontal:5,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",gap:4},pill:{width:56,height:36,borderRadius:999,alignItems:"center",justifyContent:"center"},pillOn:{backgroundColor:C.primary},tabLabel:{fontSize:11,color:C.muted,fontWeight:"500"},
+ bar:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:5,paddingVertical:4,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",gap:2},pill:{width:52,height:30,borderRadius:999,overflow:"hidden",alignItems:"center",justifyContent:"center"},pillOn:{backgroundColor:C.primary},tabLabel:{fontSize:11,color:C.muted,fontWeight:"500"},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
