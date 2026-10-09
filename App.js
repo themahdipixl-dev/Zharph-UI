@@ -4,8 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useFonts } from "@expo-google-fonts/material-symbols-rounded/useFonts";
-import { MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded/400Regular";
+import { useFonts, MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded";
 
 const C = {
   bg: "#111216", surface: "#1B1C22", surface2: "#24252D",
