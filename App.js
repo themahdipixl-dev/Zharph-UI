@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animat
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
-import { Home as HomeRounded, HomeFill as HomeFillRounded, Layers as LayersRounded, LayersFill as LayersFillRounded, Add as AddRounded, Bookmark as BookmarkRounded, BookmarkFill as BookmarkFillRounded, Settings as SettingsRounded, SettingsFill as SettingsFillRounded, Image as ImageRounded } from "@material-symbols-svg/react-native/rounded";
+import { useFonts, MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded";
 
 const C = {
   bg: "#111216", surface: "#1B1C22", surface2: "#24252D",
@@ -23,21 +23,13 @@ const tabs = [
   ["Add", "add"], ["Saved", "bookmark"], ["Settings", "settings"]
 ];
 
-const roundedSymbols = {
-  home: [HomeRounded, HomeFillRounded],
-  layers: [LayersRounded, LayersFillRounded],
-  add: [AddRounded, AddRounded],
-  bookmark: [BookmarkRounded, BookmarkFillRounded],
-  settings: [SettingsRounded, SettingsFillRounded],
-  image: [ImageRounded, ImageRounded]
-};
-
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
-  const Icon = roundedSymbols[name]?.[filled ? 1 : 0] || ImageRounded;
-  return <Icon size={size} color={color} style={style} />;
+  return <Text accessibilityLabel={name} style={[{ fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size * 1.2, color, textAlign: "center", includeFontPadding: false }, style]}>{name}</Text>;
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({ MaterialSymbolsRounded_400Regular });
+
   useEffect(() => {
     NavigationBar.setStyle("light");
     NavigationBar.setButtonStyleAsync("dark").catch(() => {});
@@ -136,6 +128,8 @@ export default function App() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
     if (!result.canceled && result.assets?.[0]?.uri) setUserImages(prev => [result.assets[0].uri, ...prev]);
   };
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
