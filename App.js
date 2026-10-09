@@ -48,7 +48,7 @@ export default function App() {
             </View>
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
-        <View style={s.bar}>{tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>setTab(name)} style={s.tab}><View style={[s.pill,active&&s.pillOn]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]):icon} size={22} color={active?C.onPrimary:C.muted}/></View><Text style={[s.tabLabel,active&&{color:C.text,fontWeight:"700"}]}>{name}</Text></Pressable>})}</View>
+        <View style={s.bar}>{tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>setTab(name)} style={s.tab}><View style={[s.pill,active&&s.pillOn]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]):icon} size={22} color={active?C.onPrimary:C.muted}/></View></Pressable>})}</View>
       </View>
     </SafeAreaView>
   );
