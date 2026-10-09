@@ -39,8 +39,8 @@ export default function App() {
   }, [tab, pageProgress]);
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === tab);
-    if (activeIndex < 0 || activeIndex === 2) return;
-    const slot = activeIndex > 2 ? activeIndex - 1 : activeIndex;
+    if (activeIndex < 0) return;
+    const slot = activeIndex;
     Animated.parallel([
       Animated.spring(liquidX, {
         toValue: slot * 52,
