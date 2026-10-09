@@ -3,7 +3,6 @@ import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animat
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useFonts, MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded";
 
 const C = {
@@ -25,9 +24,6 @@ const tabs = [
 ];
 
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
-  if (filled) {
-    return <MaterialIcons accessibilityLabel={name} name={name} size={size} color={color} style={style} />;
-  }
   return <Text accessibilityLabel={name} style={[{ fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size * 1.2, color, textAlign: "center", includeFontPadding: false }, style]}>{name}</Text>;
 }
 
