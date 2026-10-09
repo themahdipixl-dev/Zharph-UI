@@ -80,7 +80,7 @@ export default function App() {
         </ScrollView>
         </View>
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
-          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ scaleX: liquidStretch }, { translateX: liquidX }] }]} />
+          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }] }]} />
           {tabs.map(([name,icon])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name==="Add"){setNavTab("Add");addPhoto();}else{setTab(name);setNavTab(name);}}} style={s.tab}><View style={s.pill}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></View></Pressable>})}
         </View>
       </View>
