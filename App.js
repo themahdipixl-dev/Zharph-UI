@@ -24,7 +24,7 @@ const tabs = [
 ];
 
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
-  const opticalOffset = name === "home" ? { transform: [{ translateX: 1.2 }, { translateY: -1 }] } : name === "add" ? { transform: [{ translateX: 0.8 }, { translateY: -0.8 }] } : null;
+  const opticalOffset = name === "home" ? { transform: [{ translateX: 1.2 }, { translateY: -1 }] } : null;
   return <Text accessibilityLabel={name} style={[{ width: size, height: size, fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size, color, textAlign: "center", textAlignVertical: "center", includeFontPadding: false, padding: 0, margin: 0 }, opticalOffset, style]}>{name}</Text>;
 }
 
@@ -170,7 +170,7 @@ export default function App() {
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
-          {tabs.map(([name, iconName])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><View style={s.pill}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ scale: iconScales[name] }, { rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><GoogleSymbol name={iconName} size={25} color={active?C.onPrimary:C.muted} filled={active && name !== "Add"}/></Animated.View></View></Pressable>})}
+          {tabs.map(([name, iconName])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><View style={s.pill}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ scale: iconScales[name] }, { rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }, ...(name === "Add" ? [{ translateX: addIconRotation.interpolate({ inputRange: [0, 1], outputRange: [-0.6, 1.2] }) }, { translateY: addIconRotation.interpolate({ inputRange: [0, 1], outputRange: [0.6, -1.2] }) }] : [])] }}><GoogleSymbol name={iconName} size={25} color={active?C.onPrimary:C.muted} filled={active && name !== "Add"}/></Animated.View></View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
