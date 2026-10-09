@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar } from "react-native";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, useRef } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -30,6 +30,22 @@ export default function App() {
     NavigationBar.setBackgroundColorAsync("#F3EDF7").catch(() => {});
   }, []);
   const [tab, setTab] = useState("Home");
+  const pageProgress = useRef(new Animated.Value(1)).current;
+  const pillScales = useRef(tabs.map(() => new Animated.Value(1))).current;
+  useEffect(() => {
+    pageProgress.setValue(0);
+    Animated.spring(pageProgress, { toValue: 1, speed: 18, bounciness: 5, useNativeDriver: true }).start();
+  }, [tab, pageProgress]);
+  useEffect(() => {
+    tabs.forEach(([name], index) => {
+      Animated.spring(pillScales[index], {
+        toValue: tab === name ? 1 : 0.92,
+        speed: 20,
+        bounciness: 7,
+        useNativeDriver: true
+      }).start();
+    });
+  }, [tab, pillScales]);
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const addPhoto = async () => {
@@ -40,6 +56,7 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
+        <Animated.View style={{flex:1, opacity:pageProgress, transform:[{translateY:pageProgress.interpolate({inputRange:[0,1],outputRange:[14,0]})}]}}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
           <View style={s.header}>
             <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
@@ -54,7 +71,8 @@ export default function App() {
             </View>
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
-        <View style={s.bar}>{tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>name==="Add"?addPhoto():setTab(name)} style={s.tab}><View style={[s.pill,active&&s.pillOn]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></View></Pressable>})}</View>
+        </Animated.View>
+        <View style={s.bar}>{tabs.map(([name,icon],index)=>{const active=tab===name;return <Pressable key={name} onPress={()=>name==="Add"?addPhoto():setTab(name)} style={s.tab}><Animated.View style={[s.pill,active&&s.pillOn,{transform:[{scale:pillScales[index]}]}]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}</View>
       </View>
     </SafeAreaView>
   );
