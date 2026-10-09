@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animat
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useFonts } from "@expo-google-fonts/material-symbols-rounded/useFonts";
 import { MaterialSymbolsRounded_400Regular } from "@expo-google-fonts/material-symbols-rounded/400Regular";
 
@@ -24,7 +25,10 @@ const tabs = [
   ["Add", "add"], ["Saved", "bookmark"], ["Settings", "settings"]
 ];
 
-function GoogleSymbol({ name, size = 24, color, style }) {
+function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
+  if (filled) {
+    return <MaterialIcons accessibilityLabel={name} name={name} size={size} color={color} style={style} />;
+  }
   return <Text accessibilityLabel={name} style={[{ fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size * 1.2, color, textAlign: "center", includeFontPadding: false }, style]}>{name}</Text>;
 }
 
@@ -170,7 +174,7 @@ export default function App() {
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: liquidX }, { scaleX: liquidStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
-          {tabs.map(([name, iconName])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><GoogleSymbol name={iconName} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Animated.View></Pressable>})}
+          {tabs.map(([name, iconName])=>{const active=navTab===name;return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><GoogleSymbol name={iconName} size={25} color={active?C.onPrimary:C.muted} filled={active && name !== "Add"}/></Animated.View></Animated.View></Pressable>})}
         </View>
       </View>
     </SafeAreaView>
