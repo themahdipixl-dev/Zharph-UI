@@ -31,21 +31,29 @@ export default function App() {
   }, []);
   const [tab, setTab] = useState("Home");
   const pageProgress = useRef(new Animated.Value(1)).current;
-  const pillScales = useRef(tabs.map(() => new Animated.Value(1))).current;
+  const liquidX = useRef(new Animated.Value(0)).current;
+  const liquidStretch = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     pageProgress.setValue(0);
     Animated.spring(pageProgress, { toValue: 1, speed: 18, bounciness: 5, useNativeDriver: true }).start();
   }, [tab, pageProgress]);
   useEffect(() => {
-    tabs.forEach(([name], index) => {
-      Animated.spring(pillScales[index], {
-        toValue: tab === name ? 1 : 0.92,
-        speed: 20,
-        bounciness: 7,
+    const activeIndex = tabs.findIndex(([name]) => name === tab);
+    if (activeIndex < 0 || activeIndex === 2) return;
+    const slot = activeIndex > 2 ? activeIndex - 1 : activeIndex;
+    Animated.parallel([
+      Animated.spring(liquidX, {
+        toValue: slot * 52,
+        speed: 14,
+        bounciness: 9,
         useNativeDriver: true
-      }).start();
-    });
-  }, [tab, pillScales]);
+      }),
+      Animated.sequence([
+        Animated.timing(liquidStretch, { toValue: 1.42, duration: 120, useNativeDriver: true }),
+        Animated.spring(liquidStretch, { toValue: 1, speed: 12, bounciness: 10, useNativeDriver: true })
+      ])
+    ]).start();
+  }, [tab, liquidX, liquidStretch]);
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const addPhoto = async () => {
@@ -72,7 +80,10 @@ export default function App() {
             </> : <View style={s.placeholder}><View style={s.bigIcon}><MaterialCommunityIcons name={tab==="Depth"?"layers-triple-outline":tab==="Saved"?"bookmark-outline":tab==="Settings"?"cog-outline":"image-outline"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
         </Animated.View>
-        <View style={s.bar}>{tabs.map(([name,icon],index)=>{const active=tab===name;return <Pressable key={name} onPress={()=>name==="Add"?addPhoto():setTab(name)} style={s.tab}><Animated.View style={[s.pill,active&&s.pillOn,{transform:[{scale:pillScales[index]}]}]}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></Animated.View></Pressable>})}</View>
+        <View style={s.bar}>
+          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { transform: [{ translateX: liquidX }, { scaleX: liquidStretch }] }]} />
+          {tabs.map(([name,icon])=>{const active=tab===name;return <Pressable key={name} onPress={()=>name==="Add"?addPhoto():setTab(name)} style={s.tab}><View style={s.pill}><MaterialCommunityIcons name={active?({Home:"view-dashboard-variant",Depth:"layers-triple",Saved:"bookmark",Settings:"cog"}[name]||"plus") : icon} size={25} color={active?C.onPrimary:C.muted}/></View></Pressable>})}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -83,6 +94,6 @@ const s=StyleSheet.create({
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},
- bar:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{width:52,alignItems:"center",justifyContent:"center",alignSelf:"stretch"},pill:{width:54,height:54,borderRadius:27,overflow:"hidden",alignItems:"center",justifyContent:"center"},pillOn:{backgroundColor:C.primary},
+ bar:{position:"relative",flexDirection:"row",justifyContent:"space-between",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{width:52,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",left:7,top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
