@@ -24,7 +24,7 @@ const tabs = [
 ];
 
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
-  return <Text accessibilityLabel={name} style={[{ fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size * 1.2, color, textAlign: "center", includeFontPadding: false }, style]}>{name}</Text>;
+  return <Text accessibilityLabel={name} style={[{ width: size, height: size, fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size, color, textAlign: "center", textAlignVertical: "center", includeFontPadding: false, padding: 0, margin: 0 }, style]}>{name}</Text>;
 }
 
 export default function App() {
