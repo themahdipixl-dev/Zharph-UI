@@ -40,6 +40,7 @@ export default function App() {
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
   const popupProgress = useRef(new Animated.Value(0)).current;
+  const popupOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
     if (activeIndex < 0) return;
@@ -68,17 +69,25 @@ export default function App() {
     });
   }, [navTab, iconScales]);
   useEffect(() => {
+    // Opacity is independent from the elastic spring so its rebound cannot
+    // briefly reveal a tiny, faded capsule at the end of closing.
+    popupOpacity.stopAnimation();
+    Animated.timing(popupOpacity, {
+      toValue: addPopupVisible ? 1 : 0,
+      duration: addPopupVisible ? 110 : 170,
+      useNativeDriver: true
+    }).start();
+
+    popupProgress.stopAnimation();
     Animated.spring(popupProgress, {
       toValue: addPopupVisible ? 1 : 0,
       speed: 16,
       bounciness: 14,
       useNativeDriver: true
     }).start(({ finished }) => {
-      // Unmount after the original closing animation completes, so a settled
-      // Animated.View cannot be painted again by a later render.
       if (finished && !addPopupVisible) setPopupMounted(false);
     });
-  }, [addPopupVisible, popupProgress]);
+  }, [addPopupVisible, popupProgress, popupOpacity]);
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const addPhoto = async () => {
@@ -108,12 +117,12 @@ export default function App() {
         </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
-            opacity: popupProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: "clamp" })
+            opacity: popupOpacity
           }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddPopupVisible(false)} />
           </Animated.View>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
-            opacity: popupProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: "clamp" }),
+            opacity: popupOpacity,
             transform: [
               { translateY: popupProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) },
               { scaleX: popupProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) },
