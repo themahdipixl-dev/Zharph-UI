@@ -49,9 +49,13 @@ export default function App() {
   const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
-  const [curtainHeight, setCurtainHeight] = useState(0);
-  const curtainProgress = useRef(new Animated.Value(0)).current;
-  const curtainBusy = useRef(false);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [swipeTransition, setSwipeTransition] = useState(null);
+  const swipeTopX = useRef(new Animated.Value(0)).current;
+  const swipeBottomX = useRef(new Animated.Value(0)).current;
+  const swipeTransitionRef = useRef(null);
+  const swipeStartTabRef = useRef(navTab);
+  const swipeSettlingRef = useRef(false);
   const navTabRef = useRef(navTab);
   const addPopupVisibleRef = useRef(addPopupVisible);
   navTabRef.current = navTab;
@@ -130,53 +134,96 @@ export default function App() {
       if (finished && !addPopupVisible) setPopupMounted(false);
     });
   }, [addPopupVisible, popupProgress, popupOpacity]);
-  const navigateToTab = (targetName) => {
-    if (curtainBusy.current || targetName === navTabRef.current) return;
-    const targetIsAdd = targetName === "Add";
-    curtainBusy.current = true;
-    curtainProgress.stopAnimation();
-    if (addPopupVisibleRef.current) setAddPopupVisible(false);
-    Animated.timing(curtainProgress, {
-      toValue: 1,
-      duration: 190,
-      useNativeDriver: true
-    }).start(({ finished }) => {
-      if (!finished) {
-        curtainBusy.current = false;
-        return;
+  const finishSwipeTransition = (commit, targetName, direction) => {
+    if (swipeSettlingRef.current) return;
+    swipeSettlingRef.current = true;
+    const distance = commit ? direction * stageSize.width : 0;
+    Animated.parallel([
+      Animated.timing(swipeTopX, { toValue: distance, duration: commit ? 180 : 130, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(42),
+        Animated.timing(swipeBottomX, { toValue: distance, duration: commit ? 190 : 140, useNativeDriver: true })
+      ])
+    ]).start(({ finished }) => {
+      if (finished && commit && targetName) {
+        setNavTab(targetName);
+        navTabRef.current = targetName;
+        if (targetName === "Add") {
+          setPopupMounted(true);
+          setAddPopupVisible(true);
+        } else {
+          setAddPopupVisible(false);
+          setTab(targetName);
+        }
       }
-      setNavTab(targetName);
-      navTabRef.current = targetName;
-      if (targetIsAdd) {
-        setPopupMounted(true);
-        setAddPopupVisible(true);
-      } else {
-        setTab(targetName);
-        setAddPopupVisible(false);
-      }
-      Animated.timing(curtainProgress, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true
-      }).start(() => {
-        curtainBusy.current = false;
-      });
+      swipeTopX.setValue(0);
+      swipeBottomX.setValue(0);
+      swipeTransitionRef.current = null;
+      setSwipeTransition(null);
+      swipeSettlingRef.current = false;
     });
   };
-  navigateToTabRef.current = navigateToTab;
   const swipeResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) =>
-      Math.abs(gesture.dx) > 16 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.25,
-    onPanResponderRelease: (_, gesture) => {
-      if (Math.abs(gesture.dx) < 55 && Math.abs(gesture.vx) < 0.45) return;
+    onMoveShouldSetPanResponder: (_, gesture) => {
+      if (Math.abs(gesture.dx) <= 12 || Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.25) return false;
       const currentIndex = tabs.findIndex(([name]) => name === navTabRef.current);
       const nextIndex = currentIndex + (gesture.dx < 0 ? 1 : -1);
+      return nextIndex >= 0 && nextIndex < tabs.length && !swipeSettlingRef.current;
+    },
+    onPanResponderGrant: () => {
+      swipeStartTabRef.current = navTabRef.current;
+      swipeTransitionRef.current = null;
+      swipeTopX.setValue(0);
+      swipeBottomX.setValue(0);
+    },
+    onPanResponderMove: (_, gesture) => {
+      if (swipeSettlingRef.current || stageSize.width <= 0) return;
+      const direction = gesture.dx < 0 ? -1 : 1;
+      const currentIndex = tabs.findIndex(([name]) => name === swipeStartTabRef.current);
+      const nextIndex = currentIndex + (direction < 0 ? 1 : -1);
       if (nextIndex < 0 || nextIndex >= tabs.length) return;
-      navigateToTabRef.current?.(tabs[nextIndex][0]);
+      if (!swipeTransitionRef.current) {
+        const transition = { from: swipeStartTabRef.current, to: tabs[nextIndex][0], direction };
+        swipeTransitionRef.current = transition;
+        setSwipeTransition(transition);
+        if (addPopupVisibleRef.current) setAddPopupVisible(false);
+      }
+      const activeTransition = swipeTransitionRef.current;
+      if (activeTransition.direction !== direction) return;
+      const dx = Math.max(-stageSize.width, Math.min(stageSize.width, gesture.dx));
+      swipeTopX.setValue(dx);
+      swipeBottomX.stopAnimation();
+      Animated.timing(swipeBottomX, { toValue: dx, duration: 42, useNativeDriver: true }).start();
+    },
+    onPanResponderRelease: (_, gesture) => {
+      const transition = swipeTransitionRef.current;
+      if (!transition || swipeSettlingRef.current) return;
+      const shouldCommit = Math.abs(gesture.dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(gesture.vx) > 0.55;
+      finishSwipeTransition(shouldCommit, transition.to, transition.direction);
+    },
+    onPanResponderTerminate: () => {
+      const transition = swipeTransitionRef.current;
+      if (transition && !swipeSettlingRef.current) finishSwipeTransition(false, null, transition.direction);
     }
   })).current;
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
+  const renderPage = (pageTab, pointerEvents = "auto") => (
+    <ScrollView pointerEvents={pointerEvents} showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
+      <View style={s.header}>
+        <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
+      </View>
+      {pageTab === "Home" || pageTab === "Add" ? <>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>
+          {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
+        </ScrollView>
+        <View style={s.grid}>
+          {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
+          {items.map(([title,uri])=><Pressable key={title} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
+        </View>
+      </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
+    </ScrollView>
+  );
   const addPhoto = async () => {
     setAddPopupVisible(false);
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
@@ -188,31 +235,32 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
-        <View style={{flex:1}} onLayout={event => setCurtainHeight(event.nativeEvent.layout.height)} {...swipeResponder.panHandlers}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-          <View style={s.header}>
-            <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
+        <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} {...swipeResponder.panHandlers}>
+          <View pointerEvents={swipeTransition ? "none" : "auto"} style={{flex:1, opacity: swipeTransition ? 0 : 1}}>
+            {renderPage(tab)}
           </View>
-          {tab === "Home" || tab === "Add" ? <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>
-              {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
-            </ScrollView>
-            <View style={s.grid}>
-              {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
-              {items.map(([title,uri])=><Pressable key={title} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
-            </View>
-            </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={tab==="Depth"?"layers":tab==="Saved"?"bookmark":tab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
-        </ScrollView>
-        {curtainHeight > 0 && <>
-          <Animated.View pointerEvents="none" style={[s.curtainTop, {
-            height: curtainHeight / 2,
-            transform: [{ translateY: curtainProgress.interpolate({ inputRange: [0, 1], outputRange: [-curtainHeight / 2, 0] }) }]
-          }]} />
-          <Animated.View pointerEvents="none" style={[s.curtainBottom, {
-            height: curtainHeight / 2,
-            transform: [{ translateY: curtainProgress.interpolate({ inputRange: [0, 1], outputRange: [curtainHeight / 2, 0] }) }]
-          }]} />
-        </>}
+          {swipeTransition && stageSize.width > 0 && stageSize.height > 0 && <>
+            {["top","bottom"].map((half) => {
+              const isBottom = half === "bottom";
+              const offset = isBottom ? stageSize.height / 2 : 0;
+              const outgoingX = isBottom ? swipeBottomX : swipeTopX;
+              const incomingX = isBottom ? swipeBottomX : swipeTopX;
+              const incomingBase = swipeTransition.direction < 0 ? stageSize.width : -stageSize.width;
+              const incomingTranslate = Animated.add(incomingX, new Animated.Value(incomingBase));
+              return <React.Fragment key={half}>
+                <Animated.View pointerEvents="none" style={{position:"absolute",left:0,top:offset,width:stageSize.width,height:stageSize.height/2,overflow:"hidden",zIndex:2,transform:[{translateX:outgoingX}]}}>
+                  <View style={{position:"absolute",top:-offset,width:stageSize.width,height:stageSize.height}}>
+                    {renderPage(swipeTransition.from, "none")}
+                  </View>
+                </Animated.View>
+                <Animated.View pointerEvents="none" style={{position:"absolute",left:0,top:offset,width:stageSize.width,height:stageSize.height/2,overflow:"hidden",zIndex:1,transform:[{translateX:incomingTranslate}]}}>
+                  <View style={{position:"absolute",top:-offset,width:stageSize.width,height:stageSize.height}}>
+                    {renderPage(swipeTransition.to, "none")}
+                  </View>
+                </Animated.View>
+              </React.Fragment>;
+            })}
+          </>}
         </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
@@ -245,6 +293,6 @@ const s=StyleSheet.create({
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},
- curtainTop:{position:"absolute",top:0,left:0,right:0,backgroundColor:C.bg,zIndex:8},curtainBottom:{position:"absolute",bottom:0,left:0,right:0,backgroundColor:C.bg,zIndex:8},popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,backgroundColor:"rgba(0,0,0,0.22)"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"relative",zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
+popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,backgroundColor:"rgba(0,0,0,0.22)"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"relative",zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
