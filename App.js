@@ -262,7 +262,7 @@ export default function App() {
       swipeSettlingRef.current = false;
       swipeSettleTargetRef.current = null;
       const pendingTouch = {
-        x: touch.pageX, y: touch.pageY, localX: touch.locationX,
+        x: touch.pageX, y: touch.pageY,
         time: Date.now(), identifier: touch.identifier,
         lastX: touch.pageX, lastY: touch.pageY, released: false
       };
@@ -279,7 +279,8 @@ export default function App() {
           const incomingX = offset + (activeTransition.direction < 0 ? width : -width);
           const visibleLeft = Math.max(0, incomingX);
           const visibleRight = Math.min(width, incomingX + width);
-          const touchX = typeof pendingTouch.localX === "number" ? pendingTouch.localX : pendingTouch.x;
+          // pageX is in screen coordinates; the stage starts at the screen's left edge.
+          const touchX = pendingTouch.x;
           const touchesIncoming = visibleRight > visibleLeft && touchX >= visibleLeft && touchX <= visibleRight;
           if (touchesIncoming) {
             const previousFrom = activeTransition.from;
