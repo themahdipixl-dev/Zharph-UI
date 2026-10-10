@@ -144,7 +144,8 @@ export default function App() {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
     const distance = commit ? direction * stageSize.width : 0;
-    const settleDuration = commit ? 210 : 170;
+    const settleDuration = commit ? 320 : 240;
+    const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
     const startIndex = Math.max(0, tabs.findIndex(([name]) => name === swipeStartTabRef.current));
     const targetIndex = commit && targetName
       ? Math.max(0, tabs.findIndex(([name]) => name === targetName))
@@ -153,11 +154,13 @@ export default function App() {
       Animated.timing(swipeTopX, {
         toValue: distance,
         duration: settleDuration,
+        easing: settleEasing,
         useNativeDriver: true
       }),
       Animated.timing(liquidX, {
         toValue: targetIndex * slotWidth,
         duration: settleDuration,
+        easing: settleEasing,
         useNativeDriver: true
       }),
       Animated.spring(liquidStretch, {
