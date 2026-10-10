@@ -175,20 +175,6 @@ export default function App() {
         skipNextNavAnimationRef.current = true;
         setNavTab(targetName);
         navTabRef.current = targetName;
-        liquidStretch.setValue(1);
-        Animated.sequence([
-          Animated.timing(liquidStretch, {
-            toValue: 1.42,
-            duration: 120,
-            useNativeDriver: true
-          }),
-          Animated.spring(liquidStretch, {
-            toValue: 1,
-            speed: 12,
-            bounciness: 10,
-            useNativeDriver: true
-          })
-        ]).start();
         if (targetName === "Add") {
           setPopupMounted(true);
           setAddPopupVisible(true);
