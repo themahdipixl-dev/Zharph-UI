@@ -45,6 +45,7 @@ export default function App() {
   const liquidStretch = useRef(new Animated.Value(1)).current;
   const liquidTapX = useRef(new Animated.Value(1)).current;
   const liquidTapY = useRef(new Animated.Value(1)).current;
+  const skipNextNavAnimationRef = useRef(false);
   const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
   const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
@@ -66,6 +67,10 @@ export default function App() {
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
     if (activeIndex < 0) return;
+    if (skipNextNavAnimationRef.current) {
+      skipNextNavAnimationRef.current = false;
+      return;
+    }
     const slot = activeIndex;
     Animated.parallel([
       Animated.spring(liquidX, {
@@ -165,8 +170,25 @@ export default function App() {
       })
     ]).start(({ finished }) => {
       if (finished && commit && targetName) {
+        // The indicator already followed the finger; skip the normal tab-click
+        // animation and play a separate liquid-drop at the swipe destination.
+        skipNextNavAnimationRef.current = true;
         setNavTab(targetName);
         navTabRef.current = targetName;
+        liquidStretch.setValue(1);
+        Animated.sequence([
+          Animated.timing(liquidStretch, {
+            toValue: 1.42,
+            duration: 120,
+            useNativeDriver: true
+          }),
+          Animated.spring(liquidStretch, {
+            toValue: 1,
+            speed: 12,
+            bounciness: 10,
+            useNativeDriver: true
+          })
+        ]).start();
         if (targetName === "Add") {
           setPopupMounted(true);
           setAddPopupVisible(true);
