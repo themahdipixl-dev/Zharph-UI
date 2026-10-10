@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated } from "react-native";
-import { BlurView } from "expo-blur";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -46,7 +45,6 @@ export default function App() {
   const liquidStretch = useRef(new Animated.Value(1)).current;
   const liquidTapX = useRef(new Animated.Value(1)).current;
   const liquidTapY = useRef(new Animated.Value(1)).current;
-  const skipNextNavAnimationRef = useRef(false);
   const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
   const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
@@ -68,10 +66,6 @@ export default function App() {
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
     if (activeIndex < 0) return;
-    if (skipNextNavAnimationRef.current) {
-      skipNextNavAnimationRef.current = false;
-      return;
-    }
     const slot = activeIndex;
     Animated.parallel([
       Animated.spring(liquidX, {
@@ -144,36 +138,13 @@ export default function App() {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
     const distance = commit ? direction * stageSize.width : 0;
-    const settleDuration = commit ? 320 : 240;
-    const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
-    const startIndex = Math.max(0, tabs.findIndex(([name]) => name === swipeStartTabRef.current));
-    const targetIndex = commit && targetName
-      ? Math.max(0, tabs.findIndex(([name]) => name === targetName))
-      : startIndex;
-    Animated.parallel([
-      Animated.timing(swipeTopX, {
-        toValue: distance,
-        duration: settleDuration,
-        easing: settleEasing,
-        useNativeDriver: true
-      }),
-      Animated.timing(liquidX, {
-        toValue: targetIndex * slotWidth,
-        duration: settleDuration,
-        easing: settleEasing,
-        useNativeDriver: true
-      }),
-      Animated.spring(liquidStretch, {
-        toValue: 1,
-        speed: 12,
-        bounciness: 10,
-        useNativeDriver: true
-      })
-    ]).start(({ finished }) => {
+    Animated.timing(swipeTopX, {
+      toValue: distance,
+      duration: commit ? 320 : 240,
+      easing: commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true
+    }).start(({ finished }) => {
       if (finished && commit && targetName) {
-        // The indicator already followed the finger; skip the normal tab-click
-        // animation and play a separate liquid-drop at the swipe destination.
-        skipNextNavAnimationRef.current = true;
         setNavTab(targetName);
         navTabRef.current = targetName;
         if (targetName === "Add") {
@@ -184,16 +155,11 @@ export default function App() {
           setTab(targetName);
         }
       }
-      // Remove the transition layers before resetting their animated offsets.
-      // Resetting first can briefly put the outgoing (old) page back at x=0,
-      // causing it to flash over the newly selected page on some renders.
+      swipeTopX.setValue(0);
+      swipeBottomX.setValue(0);
       swipeTransitionRef.current = null;
       setSwipeTransition(null);
-      requestAnimationFrame(() => {
-        swipeTopX.setValue(0);
-        swipeBottomX.setValue(0);
-        swipeSettlingRef.current = false;
-      });
+      swipeSettlingRef.current = false;
     });
   };
   const touchStartRef = useRef(null);
@@ -239,20 +205,6 @@ export default function App() {
     const clampedDx = Math.max(-stageSize.width, Math.min(stageSize.width, dx));
     swipeTopX.setValue(clampedDx);
     swipeBottomX.setValue(clampedDx);
-    // Move the liquid bottom-nav indicator in direct proportion to the finger.
-    // A full screen-width swipe corresponds to one navigation slot.
-    if (slotWidth > 0) {
-      const startIndex = Math.max(0, tabs.findIndex(([name]) => name === start.tab));
-      const maxIndex = tabs.length - 1;
-      const progress = clampedDx / stageSize.width;
-      const indicatorIndex = Math.max(0, Math.min(maxIndex, startIndex - progress));
-      liquidX.setValue(indicatorIndex * slotWidth);
-
-      // Stretch the liquid capsule as it follows the finger, then spring it
-      // back to its normal circular shape when the swipe settles.
-      const stretch = 1 + Math.min(0.42, Math.abs(clampedDx) / stageSize.width * 0.65);
-      liquidStretch.setValue(stretch);
-    }
     const now = Date.now();
     const elapsed = Math.max(1, now - lastSwipeRef.current.time);
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
@@ -303,61 +255,21 @@ export default function App() {
             const width = stageSize.width;
             const height = stageSize.height;
             const direction = swipeTransition.direction;
-            const progress = swipeTopX.interpolate({
-              inputRange: direction < 0 ? [-width, 0] : [0, width],
-              outputRange: direction < 0 ? [1, 0] : [0, 1],
-              extrapolate: "clamp"
-            });
-            const outgoingScale = progress.interpolate({
-              inputRange: [0, 1], outputRange: [1, 0.84]
-            });
-            const outgoingOpacity = progress.interpolate({
-              inputRange: [0, 1], outputRange: [1, 0.24]
-            });
-            const blurOpacity = progress.interpolate({
-              inputRange: [0, 0.2, 0.65, 1],
-              outputRange: [0, 0.45, 0.9, 1],
-              extrapolate: "clamp"
-            });
-            const incomingScale = progress.interpolate({
-              inputRange: [0, 1], outputRange: [0.94, 1]
-            });
-            const incomingOpacity = progress.interpolate({
-              inputRange: [0, 0.55, 1], outputRange: [0, 0.8, 1],
-              extrapolate: "clamp"
-            });
-            const incomingX = progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [direction < 0 ? width * 0.42 : -width * 0.42, 0],
-              extrapolate: "clamp"
-            });
+            const incomingX = Animated.add(swipeTopX, direction < 0 ? width : -width);
             return <>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 1, overflow: "hidden", opacity: incomingOpacity,
-                transform: [{ translateX: incomingX }, { scale: incomingScale }]
+                zIndex: 1, overflow: "hidden",
+                transform: [{ translateX: incomingX }]
               }}>
                 {renderPage(swipeTransition.to, "none")}
               </Animated.View>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 2, overflow: "hidden", opacity: outgoingOpacity,
-                transform: [{ scale: outgoingScale }]
+                zIndex: 2, overflow: "hidden",
+                transform: [{ translateX: swipeTopX }]
               }}>
                 {renderPage(swipeTransition.from, "none")}
-                <Animated.View pointerEvents="none" style={{
-                  ...StyleSheet.absoluteFillObject,
-                  opacity: blurOpacity,
-                  overflow: "hidden"
-                }}>
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    experimentalBlurMethod="dimezisBlurView"
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(17,18,22,0.22)" }]} />
-                </Animated.View>
               </Animated.View>
             </>;
           })()}
