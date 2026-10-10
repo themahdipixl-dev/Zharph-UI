@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated } from "react-native";
-import { BlurView } from "expo-blur";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -141,7 +140,8 @@ export default function App() {
     const distance = commit ? direction * stageSize.width : 0;
     Animated.timing(swipeTopX, {
       toValue: distance,
-      duration: commit ? 210 : 170,
+      duration: commit ? 320 : 240,
+      easing: commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1),
       useNativeDriver: true
     }).start(({ finished }) => {
       if (finished && commit && targetName) {
@@ -255,61 +255,21 @@ export default function App() {
             const width = stageSize.width;
             const height = stageSize.height;
             const direction = swipeTransition.direction;
-            const progress = swipeTopX.interpolate({
-              inputRange: direction < 0 ? [-width, 0] : [0, width],
-              outputRange: direction < 0 ? [1, 0] : [0, 1],
-              extrapolate: "clamp"
-            });
-            const outgoingScale = progress.interpolate({
-              inputRange: [0, 1], outputRange: [1, 0.84]
-            });
-            const outgoingOpacity = progress.interpolate({
-              inputRange: [0, 1], outputRange: [1, 0.24]
-            });
-            const blurOpacity = progress.interpolate({
-              inputRange: [0, 0.2, 0.65, 1],
-              outputRange: [0, 0.45, 0.9, 1],
-              extrapolate: "clamp"
-            });
-            const incomingScale = progress.interpolate({
-              inputRange: [0, 1], outputRange: [0.94, 1]
-            });
-            const incomingOpacity = progress.interpolate({
-              inputRange: [0, 0.55, 1], outputRange: [0, 0.8, 1],
-              extrapolate: "clamp"
-            });
-            const incomingX = progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [direction < 0 ? width * 0.42 : -width * 0.42, 0],
-              extrapolate: "clamp"
-            });
+            const incomingX = Animated.add(swipeTopX, direction < 0 ? width : -width);
             return <>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 1, overflow: "hidden", opacity: incomingOpacity,
-                transform: [{ translateX: incomingX }, { scale: incomingScale }]
+                zIndex: 1, overflow: "hidden",
+                transform: [{ translateX: incomingX }]
               }}>
                 {renderPage(swipeTransition.to, "none")}
               </Animated.View>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 2, overflow: "hidden", opacity: outgoingOpacity,
-                transform: [{ scale: outgoingScale }]
+                zIndex: 2, overflow: "hidden",
+                transform: [{ translateX: swipeTopX }]
               }}>
                 {renderPage(swipeTransition.from, "none")}
-                <Animated.View pointerEvents="none" style={{
-                  ...StyleSheet.absoluteFillObject,
-                  opacity: blurOpacity,
-                  overflow: "hidden"
-                }}>
-                  <BlurView
-                    intensity={100}
-                    tint="dark"
-                    experimentalBlurMethod="dimezisBlurView"
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(17,18,22,0.22)" }]} />
-                </Animated.View>
               </Animated.View>
             </>;
           })()}
