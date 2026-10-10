@@ -230,8 +230,8 @@ export default function App() {
     if (touches.length > 1) return;
     swipeGenerationRef.current += 1;
 
-    // If the user starts another swipe before the previous settle animation ends,
-    // finish that transition immediately so the new gesture can begin without waiting.
+    // If a new touch begins before the indicator's settle animation finishes,
+    // cancel that animation and put the indicator at the resolved tab immediately.
     if (swipeSettlingRef.current) {
       swipeTopX.stopAnimation();
       swipeBottomX.stopAnimation();
@@ -259,6 +259,15 @@ export default function App() {
       liquidStretch.setValue(1);
       swipeSettleTargetRef.current = null;
       swipeSettlingRef.current = false;
+    } else if (!swipeTransitionRef.current) {
+      // A very fast lift-and-retouch can interrupt the spring between two tabs.
+      // Normalize the indicator before recording the next gesture so it cannot
+      // remain stranded between icons.
+      liquidX.stopAnimation();
+      liquidStretch.stopAnimation();
+      const activeIndex = tabs.findIndex(([name]) => name === navTabRef.current);
+      if (activeIndex >= 0 && slotWidth > 0) liquidX.setValue(activeIndex * slotWidth);
+      liquidStretch.setValue(1);
     }
 
     const startTab = navTabRef.current;
