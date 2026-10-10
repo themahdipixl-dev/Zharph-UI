@@ -175,7 +175,9 @@ export default function App() {
         useNativeDriver: true
       })
     ]).start(({ finished }) => {
-      if (!finished) return;
+      // A rapid new gesture can begin as this animation completes. Ignore any
+      // stale completion before it commits a tab or clears a newer transition.
+      if (!finished || swipeGenerationRef.current !== settleGeneration) return;
       if (commit && targetName) {
         // The indicator already followed the finger; don't replay the tab-click animation.
         skipNextNavAnimationRef.current = true;
