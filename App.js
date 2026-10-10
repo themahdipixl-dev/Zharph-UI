@@ -210,8 +210,24 @@ export default function App() {
   const touchStartRef = useRef(null);
   const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
   const handleTouchStart = (event) => {
-    const touch = event.nativeEvent.touches?.[0];
+    const touches = event.nativeEvent.touches;
+    const touch = touches?.[0];
     if (!touch) return;
+
+    // A second finger cancels the in-progress swipe. Keep the original gesture
+    // state until every finger is lifted so touch-end from one finger cannot
+    // leave the page parked between tabs.
+    if (touchStartRef.current) {
+      if (touches.length > 1) {
+        touchStartRef.current.multitouch = true;
+        const activeTransition = swipeTransitionRef.current;
+        if (touchStartRef.current.claimed && activeTransition && !swipeSettlingRef.current) {
+          finishSwipeTransition(false, null, activeTransition.direction);
+        }
+      }
+      return;
+    }
+    if (touches.length > 1) return;
     swipeGenerationRef.current += 1;
 
     // If the user starts another swipe before the previous settle animation ends,
@@ -246,13 +262,13 @@ export default function App() {
     }
 
     const startTab = navTabRef.current;
-    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false };
+    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false, multitouch: false };
     lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
   const handleTouchMove = (event) => {
     const start = touchStartRef.current;
     const touch = event.nativeEvent.touches?.[0];
-    if (!start || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
+    if (!start || start.multitouch || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
     const dx = touch.pageX - start.x;
     const dy = touch.pageY - start.y;
     if (!start.claimed) {
@@ -299,10 +315,17 @@ export default function App() {
     const elapsed = Math.max(1, now - lastSwipeRef.current.time);
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
   };
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (event) => {
+    // React Native sends touch-end when any finger lifts, not only when the
+    // whole gesture ends. Wait until no fingers remain on the screen.
+    if ((event?.nativeEvent?.touches?.length ?? 0) > 0) return;
     const start = touchStartRef.current;
     touchStartRef.current = null;
     const transition = swipeTransitionRef.current;
+    if (start?.multitouch) {
+      if (transition && !swipeSettlingRef.current) finishSwipeTransition(false, null, transition.direction);
+      return;
+    }
     if (!start?.claimed || !transition || swipeSettlingRef.current) return;
     const { dx, vx } = lastSwipeRef.current;
     const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
