@@ -143,7 +143,7 @@ export default function App() {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
     const distance = commit ? direction * stageSize.width : 0;
-    const settleDuration = commit ? 320 : 240;
+    const settleDuration = commit ? 200 : 150;
     const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
     const startIndex = Math.max(0, tabs.findIndex(([name]) => name === swipeStartTabRef.current));
     const targetIndex = commit && targetName
