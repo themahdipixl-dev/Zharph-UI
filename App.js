@@ -218,14 +218,31 @@ export default function App() {
     // state until every finger is lifted so touch-end from one finger cannot
     // leave the page parked between tabs.
     if (touchStartRef.current) {
+      const previousStart = touchStartRef.current;
       if (touches.length > 1) {
-        touchStartRef.current.multitouch = true;
+        // A second finger while the original is still down is true multitouch.
+        previousStart.multitouch = true;
         const activeTransition = swipeTransitionRef.current;
-        if (touchStartRef.current.claimed && activeTransition && !swipeSettlingRef.current) {
+        if (previousStart.claimed && activeTransition && !swipeSettlingRef.current) {
           finishSwipeTransition(false, null, activeTransition.direction);
         }
+        return;
       }
-      return;
+
+      // Some Android touch sequences deliver the new finger's touch-start
+      // before the previous finger's touch-end. Do not mistake that new gesture
+      // for a continuation of the old one.
+      if (previousStart.identifier !== undefined && touch.identifier !== previousStart.identifier) {
+        const previousTransition = swipeTransitionRef.current;
+        if (previousStart.claimed && previousTransition && !swipeSettlingRef.current) {
+          const { dx, vx } = lastSwipeRef.current;
+          const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
+          finishSwipeTransition(shouldCommit, previousTransition.to, previousTransition.direction);
+        }
+        touchStartRef.current = null;
+      } else {
+        return;
+      }
     }
     if (touches.length > 1) return;
     swipeGenerationRef.current += 1;
@@ -271,7 +288,7 @@ export default function App() {
     }
 
     const startTab = navTabRef.current;
-    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false, multitouch: false };
+    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false, multitouch: false, identifier: touch.identifier };
     lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
   const handleTouchMove = (event) => {
