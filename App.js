@@ -55,6 +55,7 @@ export default function App() {
   const swipeTopX = useRef(new Animated.Value(0)).current;
   const swipeBottomX = useRef(new Animated.Value(0)).current;
   const swipeTransitionRef = useRef(null);
+  const swipeGenerationRef = useRef(0);
   const swipeStartTabRef = useRef(navTab);
   const swipeSettlingRef = useRef(false);
   const swipeSettleTargetRef = useRef(null);
@@ -144,6 +145,7 @@ export default function App() {
   const finishSwipeTransition = (commit, targetName, direction) => {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
+    const settleGeneration = swipeGenerationRef.current;
     swipeSettleCommitRef.current = commit;
     swipeSettleTargetRef.current = commit && targetName ? targetName : swipeStartTabRef.current;
     const distance = commit ? direction * stageSize.width : 0;
@@ -193,8 +195,12 @@ export default function App() {
       swipeTransitionRef.current = null;
       setSwipeTransition(null);
       requestAnimationFrame(() => {
+        // A newer gesture may have started before this frame. Never let stale
+        // cleanup reset the animated offsets of that newer page transition.
+        if (swipeGenerationRef.current !== settleGeneration || swipeTransitionRef.current) return;
         swipeTopX.setValue(0);
         swipeBottomX.setValue(0);
+        swipeSettleTargetRef.current = null;
         swipeSettlingRef.current = false;
       });
     });
@@ -204,6 +210,7 @@ export default function App() {
   const handleTouchStart = (event) => {
     const touch = event.nativeEvent.touches?.[0];
     if (!touch) return;
+    swipeGenerationRef.current += 1;
 
     // If the user starts another swipe before the previous settle animation ends,
     // finish that transition immediately so the new gesture can begin without waiting.
@@ -252,6 +259,7 @@ export default function App() {
       const nextIndex = currentIndex + (dx < 0 ? 1 : -1);
       if (nextIndex < 0 || nextIndex >= tabs.length) return;
       start.claimed = true;
+      swipeGenerationRef.current += 1;
       swipeStartTabRef.current = start.tab;
       const transition = { from: start.tab, to: tabs[nextIndex][0], direction: dx < 0 ? -1 : 1 };
       swipeTransitionRef.current = transition;
