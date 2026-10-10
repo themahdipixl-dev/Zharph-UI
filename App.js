@@ -163,19 +163,24 @@ export default function App() {
       swipeSettlingRef.current = false;
     });
   };
+  const canClaimHorizontalSwipe = (gesture) => {
+    if (Math.abs(gesture.dx) <= 8 || Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.15 || swipeSettlingRef.current) return false;
+    const currentIndex = tabs.findIndex(([name]) => name === navTabRef.current);
+    const nextIndex = currentIndex + (gesture.dx < 0 ? 1 : -1);
+    return nextIndex >= 0 && nextIndex < tabs.length;
+  };
   const swipeResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) => {
-      if (Math.abs(gesture.dx) <= 12 || Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.25) return false;
-      const currentIndex = tabs.findIndex(([name]) => name === navTabRef.current);
-      const nextIndex = currentIndex + (gesture.dx < 0 ? 1 : -1);
-      return nextIndex >= 0 && nextIndex < tabs.length && !swipeSettlingRef.current;
-    },
+    onStartShouldSetPanResponder: () => false,
+    onStartShouldSetPanResponderCapture: () => false,
+    onMoveShouldSetPanResponder: (_, gesture) => canClaimHorizontalSwipe(gesture),
+    onMoveShouldSetPanResponderCapture: (_, gesture) => canClaimHorizontalSwipe(gesture),
     onPanResponderGrant: () => {
       swipeStartTabRef.current = navTabRef.current;
       swipeTransitionRef.current = null;
       swipeTopX.setValue(0);
       swipeBottomX.setValue(0);
     },
+    onPanResponderTerminationRequest: () => false,
     onPanResponderMove: (_, gesture) => {
       if (swipeSettlingRef.current || stageSize.width <= 0) return;
       const direction = gesture.dx < 0 ? -1 : 1;
