@@ -261,27 +261,33 @@ export default function App() {
               extrapolate: "clamp"
             });
             const outgoingScale = progress.interpolate({
-              inputRange: [0, 1], outputRange: [1, 0.86]
+              inputRange: [0, 1], outputRange: [1, 0.84]
             });
             const outgoingOpacity = progress.interpolate({
-              inputRange: [0, 1], outputRange: [1, 0.28]
+              inputRange: [0, 1], outputRange: [1, 0.24]
             });
             const blurOpacity = progress.interpolate({
-              inputRange: [0, 0.65, 1], outputRange: [0, 0.55, 0.82],
+              inputRange: [0, 0.2, 0.65, 1],
+              outputRange: [0, 0.45, 0.9, 1],
               extrapolate: "clamp"
             });
             const incomingScale = progress.interpolate({
               inputRange: [0, 1], outputRange: [0.94, 1]
             });
             const incomingOpacity = progress.interpolate({
-              inputRange: [0, 0.7, 1], outputRange: [0, 0.75, 1],
+              inputRange: [0, 0.55, 1], outputRange: [0, 0.8, 1],
+              extrapolate: "clamp"
+            });
+            const incomingX = progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [direction < 0 ? width * 0.42 : -width * 0.42, 0],
               extrapolate: "clamp"
             });
             return <>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
                 zIndex: 1, overflow: "hidden", opacity: incomingOpacity,
-                transform: [{ scale: incomingScale }]
+                transform: [{ translateX: incomingX }, { scale: incomingScale }]
               }}>
                 {renderPage(swipeTransition.to, "none")}
               </Animated.View>
@@ -294,9 +300,15 @@ export default function App() {
                 <Animated.View pointerEvents="none" style={{
                   ...StyleSheet.absoluteFillObject,
                   opacity: blurOpacity,
-                  backgroundColor: "rgba(17,18,22,0.42)"
+                  overflow: "hidden"
                 }}>
-                  <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFill} />
+                  <BlurView
+                    intensity={100}
+                    tint="dark"
+                    experimentalBlurMethod="dimezisBlurView"
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(17,18,22,0.22)" }]} />
                 </Animated.View>
               </Animated.View>
             </>;
