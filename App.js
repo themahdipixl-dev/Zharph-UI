@@ -338,11 +338,9 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
         <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
-          {!swipeTransition && (
-            <View style={{flex:1}}>
-              {renderPage(tab)}
-            </View>
-          )}
+          <View pointerEvents={swipeTransition ? "none" : "auto"} style={{flex:1, opacity: swipeTransition ? 0 : 1}}>
+            {renderPage(tab)}
+          </View>
           {swipeTransition && stageSize.width > 0 && stageSize.height > 0 && (() => {
             const width = stageSize.width;
             const height = stageSize.height;
