@@ -245,38 +245,16 @@ export default function App() {
       }
     }
     if (touches.length > 1) return;
+    // A new finger must not interrupt the previous finger's settle animation.
+    // Ignore this touch until it lifts; the old swipe will finish committing or
+    // reverting the page and indicator together.
+    if (swipeSettlingRef.current) {
+      touchStartRef.current = null;
+      return;
+    }
     swipeGenerationRef.current += 1;
 
-    // If a new touch begins before the indicator's settle animation finishes,
-    // cancel that animation and put the indicator at the resolved tab immediately.
-    if (swipeSettlingRef.current) {
-      swipeTopX.stopAnimation();
-      swipeBottomX.stopAnimation();
-      liquidX.stopAnimation();
-      liquidStretch.stopAnimation();
-      const settleTarget = swipeSettleTargetRef.current;
-      if (swipeSettleCommitRef.current && settleTarget) {
-        skipNextNavAnimationRef.current = true;
-        setNavTab(settleTarget);
-        navTabRef.current = settleTarget;
-        if (settleTarget === "Add") {
-          setPopupMounted(true);
-          setAddPopupVisible(true);
-        } else {
-          setAddPopupVisible(false);
-          setTab(settleTarget);
-        }
-      }
-      swipeTransitionRef.current = null;
-      setSwipeTransition(null);
-      swipeTopX.setValue(0);
-      swipeBottomX.setValue(0);
-      const targetIndex = tabs.findIndex(([name]) => name === (settleTarget || navTabRef.current));
-      if (targetIndex >= 0) liquidX.setValue(targetIndex * slotWidth);
-      liquidStretch.setValue(1);
-      swipeSettleTargetRef.current = null;
-      swipeSettlingRef.current = false;
-    } else if (!swipeTransitionRef.current) {
+    if (!swipeTransitionRef.current) {
       // A very fast lift-and-retouch can interrupt the spring between two tabs.
       // Normalize the indicator before recording the next gesture so it cannot
       // remain stranded between icons.
