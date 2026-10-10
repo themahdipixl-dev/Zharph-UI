@@ -57,6 +57,8 @@ export default function App() {
   const swipeTransitionRef = useRef(null);
   const swipeStartTabRef = useRef(navTab);
   const swipeSettlingRef = useRef(false);
+  const swipeSettleTargetRef = useRef(null);
+  const swipeSettleCommitRef = useRef(false);
   const navTabRef = useRef(navTab);
   const addPopupVisibleRef = useRef(addPopupVisible);
   navTabRef.current = navTab;
@@ -142,6 +144,8 @@ export default function App() {
   const finishSwipeTransition = (commit, targetName, direction) => {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
+    swipeSettleCommitRef.current = commit;
+    swipeSettleTargetRef.current = commit && targetName ? targetName : swipeStartTabRef.current;
     const distance = commit ? direction * stageSize.width : 0;
     const settleDuration = commit ? 320 : 240;
     const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
@@ -169,7 +173,8 @@ export default function App() {
         useNativeDriver: true
       })
     ]).start(({ finished }) => {
-      if (finished && commit && targetName) {
+      if (!finished) return;
+      if (commit && targetName) {
         // The indicator already followed the finger; don't replay the tab-click animation.
         skipNextNavAnimationRef.current = true;
         setNavTab(targetName);
@@ -198,8 +203,41 @@ export default function App() {
   const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
   const handleTouchStart = (event) => {
     const touch = event.nativeEvent.touches?.[0];
-    if (!touch || swipeSettlingRef.current) return;
-    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: navTabRef.current, claimed: false };
+    if (!touch) return;
+
+    // If the user starts another swipe before the previous settle animation ends,
+    // finish that transition immediately so the new gesture can begin without waiting.
+    if (swipeSettlingRef.current) {
+      swipeTopX.stopAnimation();
+      swipeBottomX.stopAnimation();
+      liquidX.stopAnimation();
+      liquidStretch.stopAnimation();
+      const settleTarget = swipeSettleTargetRef.current;
+      if (swipeSettleCommitRef.current && settleTarget) {
+        skipNextNavAnimationRef.current = true;
+        setNavTab(settleTarget);
+        navTabRef.current = settleTarget;
+        if (settleTarget === "Add") {
+          setPopupMounted(true);
+          setAddPopupVisible(true);
+        } else {
+          setAddPopupVisible(false);
+          setTab(settleTarget);
+        }
+      }
+      swipeTransitionRef.current = null;
+      setSwipeTransition(null);
+      swipeTopX.setValue(0);
+      swipeBottomX.setValue(0);
+      const targetIndex = tabs.findIndex(([name]) => name === (settleTarget || navTabRef.current));
+      if (targetIndex >= 0) liquidX.setValue(targetIndex * slotWidth);
+      liquidStretch.setValue(1);
+      swipeSettleTargetRef.current = null;
+      swipeSettlingRef.current = false;
+    }
+
+    const startTab = navTabRef.current;
+    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false };
     lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
   const handleTouchMove = (event) => {
