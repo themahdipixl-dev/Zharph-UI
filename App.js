@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated } from "react-native";
+import { BlurView } from "expo-blur";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -254,49 +255,49 @@ export default function App() {
             const width = stageSize.width;
             const height = stageSize.height;
             const direction = swipeTransition.direction;
-            const outgoingX = swipeTopX.interpolate({
-              inputRange: [-width, 0, width],
-              outputRange: [-width * 0.3, 0, width * 0.3],
-              extrapolate: "clamp"
-            });
-            const incomingX = Animated.add(
-              outgoingX,
-              new Animated.Value(direction < 0 ? width * 0.3 : -width * 0.3)
-            );
-            const incomingOpacity = swipeTopX.interpolate({
+            const progress = swipeTopX.interpolate({
               inputRange: direction < 0 ? [-width, 0] : [0, width],
               outputRange: direction < 0 ? [1, 0] : [0, 1],
               extrapolate: "clamp"
             });
-            const outgoingOpacity = swipeTopX.interpolate({
-              inputRange: direction < 0 ? [-width, 0] : [0, width],
-              outputRange: direction < 0 ? [0.72, 1] : [1, 0.72],
+            const outgoingScale = progress.interpolate({
+              inputRange: [0, 1], outputRange: [1, 0.86]
+            });
+            const outgoingOpacity = progress.interpolate({
+              inputRange: [0, 1], outputRange: [1, 0.28]
+            });
+            const blurOpacity = progress.interpolate({
+              inputRange: [0, 0.65, 1], outputRange: [0, 0.55, 0.82],
               extrapolate: "clamp"
             });
-            const incomingScale = swipeTopX.interpolate({
-              inputRange: direction < 0 ? [-width, 0] : [0, width],
-              outputRange: direction < 0 ? [1, 0.92] : [0.92, 1],
-              extrapolate: "clamp"
+            const incomingScale = progress.interpolate({
+              inputRange: [0, 1], outputRange: [0.94, 1]
             });
-            const outgoingScale = swipeTopX.interpolate({
-              inputRange: direction < 0 ? [-width, 0] : [0, width],
-              outputRange: direction < 0 ? [0.96, 1] : [1, 0.96],
+            const incomingOpacity = progress.interpolate({
+              inputRange: [0, 0.7, 1], outputRange: [0, 0.75, 1],
               extrapolate: "clamp"
             });
             return <>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
                 zIndex: 1, overflow: "hidden", opacity: incomingOpacity,
-                transform: [{ translateX: incomingX }, { scale: incomingScale }]
+                transform: [{ scale: incomingScale }]
               }}>
                 {renderPage(swipeTransition.to, "none")}
               </Animated.View>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
                 zIndex: 2, overflow: "hidden", opacity: outgoingOpacity,
-                transform: [{ translateX: outgoingX }, { scale: outgoingScale }]
+                transform: [{ scale: outgoingScale }]
               }}>
                 {renderPage(swipeTransition.from, "none")}
+                <Animated.View pointerEvents="none" style={{
+                  ...StyleSheet.absoluteFillObject,
+                  opacity: blurOpacity,
+                  backgroundColor: "rgba(17,18,22,0.42)"
+                }}>
+                  <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFill} />
+                </Animated.View>
               </Animated.View>
             </>;
           })()}
