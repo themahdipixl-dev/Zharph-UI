@@ -262,10 +262,7 @@ export default function App() {
       swipeGenerationRef.current += 1;
       swipeSettlingRef.current = false;
       swipeSettleTargetRef.current = null;
-      swipeTopX.stopAnimation();
       swipeBottomX.stopAnimation();
-      liquidX.stopAnimation();
-      liquidStretch.stopAnimation();
 
       const captured = { top: 0, indicator: 0, stretch: 1, count: 0 };
       const finishCapture = () => {
@@ -427,7 +424,7 @@ export default function App() {
     if (start.interrupted && !start.moved) return;
     const { dx, vx } = lastSwipeRef.current;
     const threshold = Math.max(64, stageSize.width * 0.22);
-    const velocityCommits = vx * transition.direction < -550;
+    const velocityCommits = vx * transition.direction > 550;
     const shouldCommit = Math.abs(dx) > threshold || velocityCommits;
     finishSwipeTransition(shouldCommit, transition.to, transition.direction);
   };
