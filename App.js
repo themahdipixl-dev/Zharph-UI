@@ -138,12 +138,26 @@ export default function App() {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
     const distance = commit ? direction * stageSize.width : 0;
-    Animated.timing(swipeTopX, {
-      toValue: distance,
-      duration: commit ? 320 : 240,
-      easing: commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: true
-    }).start(({ finished }) => {
+    const settleDuration = commit ? 320 : 240;
+    const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
+    const startIndex = Math.max(0, tabs.findIndex(([name]) => name === swipeStartTabRef.current));
+    const targetIndex = commit && targetName
+      ? Math.max(0, tabs.findIndex(([name]) => name === targetName))
+      : startIndex;
+    Animated.parallel([
+      Animated.timing(swipeTopX, {
+        toValue: distance,
+        duration: settleDuration,
+        easing: settleEasing,
+        useNativeDriver: true
+      }),
+      Animated.timing(liquidX, {
+        toValue: targetIndex * slotWidth,
+        duration: settleDuration,
+        easing: settleEasing,
+        useNativeDriver: true
+      })
+    ]).start(({ finished }) => {
       if (finished && commit && targetName) {
         setNavTab(targetName);
         navTabRef.current = targetName;
@@ -210,6 +224,15 @@ export default function App() {
     const clampedDx = Math.max(-stageSize.width, Math.min(stageSize.width, dx));
     swipeTopX.setValue(clampedDx);
     swipeBottomX.setValue(clampedDx);
+    // Move the liquid bottom-nav indicator in direct proportion to the finger.
+    // A full screen-width swipe corresponds to one navigation slot.
+    if (slotWidth > 0) {
+      const startIndex = Math.max(0, tabs.findIndex(([name]) => name === start.tab));
+      const maxIndex = tabs.length - 1;
+      const progress = clampedDx / stageSize.width;
+      const indicatorIndex = Math.max(0, Math.min(maxIndex, startIndex - progress));
+      liquidX.setValue(indicatorIndex * slotWidth);
+    }
     const now = Date.now();
     const elapsed = Math.max(1, now - lastSwipeRef.current.time);
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
