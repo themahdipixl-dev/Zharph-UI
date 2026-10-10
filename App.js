@@ -138,13 +138,11 @@ export default function App() {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
     const distance = commit ? direction * stageSize.width : 0;
-    Animated.parallel([
-      Animated.timing(swipeTopX, { toValue: distance, duration: commit ? 180 : 130, useNativeDriver: true }),
-      Animated.sequence([
-        Animated.delay(42),
-        Animated.timing(swipeBottomX, { toValue: distance, duration: commit ? 190 : 140, useNativeDriver: true })
-      ])
-    ]).start(({ finished }) => {
+    Animated.timing(swipeTopX, {
+      toValue: distance,
+      duration: commit ? 210 : 170,
+      useNativeDriver: true
+    }).start(({ finished }) => {
       if (finished && commit && targetName) {
         setNavTab(targetName);
         navTabRef.current = targetName;
@@ -252,28 +250,41 @@ export default function App() {
           <View pointerEvents={swipeTransition ? "none" : "auto"} style={{flex:1, opacity: swipeTransition ? 0 : 1}}>
             {renderPage(tab)}
           </View>
-          {swipeTransition && stageSize.width > 0 && stageSize.height > 0 && <>
-            {["top","bottom"].map((half) => {
-              const isBottom = half === "bottom";
-              const offset = isBottom ? stageSize.height / 2 : 0;
-              const outgoingX = isBottom ? swipeBottomX : swipeTopX;
-              const incomingX = isBottom ? swipeBottomX : swipeTopX;
-              const incomingBase = swipeTransition.direction < 0 ? stageSize.width : -stageSize.width;
-              const incomingTranslate = Animated.add(incomingX, new Animated.Value(incomingBase));
-              return <React.Fragment key={half}>
-                <Animated.View pointerEvents="none" style={{position:"absolute",left:0,top:offset,width:stageSize.width,height:stageSize.height/2,overflow:"hidden",zIndex:2,transform:[{translateX:outgoingX}]}}>
-                  <View style={{position:"absolute",top:-offset,width:stageSize.width,height:stageSize.height}}>
-                    {renderPage(swipeTransition.from, "none")}
-                  </View>
-                </Animated.View>
-                <Animated.View pointerEvents="none" style={{position:"absolute",left:0,top:offset,width:stageSize.width,height:stageSize.height/2,overflow:"hidden",zIndex:1,transform:[{translateX:incomingTranslate}]}}>
-                  <View style={{position:"absolute",top:-offset,width:stageSize.width,height:stageSize.height}}>
-                    {renderPage(swipeTransition.to, "none")}
-                  </View>
-                </Animated.View>
-              </React.Fragment>;
-            })}
-          </>}
+          {swipeTransition && stageSize.width > 0 && stageSize.height > 0 && (() => {
+            const width = stageSize.width;
+            const outgoingX = swipeTopX.interpolate({
+              inputRange: [-width, 0, width],
+              outputRange: [-width * 0.88, 0, width * 0.88],
+              extrapolate: "clamp"
+            });
+            const incomingX = Animated.add(
+              swipeTopX.interpolate({
+                inputRange: [-width, 0, width],
+                outputRange: [-width * 0.72, 0, width * 0.72],
+                extrapolate: "clamp"
+              }),
+              new Animated.Value(swipeTransition.direction < 0 ? width : -width)
+            );
+            const incomingScale = swipeTopX.interpolate({
+              inputRange: [-width, 0, width],
+              outputRange: [1, 0.965, 1],
+              extrapolate: "clamp"
+            });
+            return <>
+              <Animated.View pointerEvents="none" style={{
+                position: "absolute", left: 0, top: 0, width, height: stageSize.height,
+                zIndex: 2, transform: [{ translateX: outgoingX }]
+              }}>
+                {renderPage(swipeTransition.from, "none")}
+              </Animated.View>
+              <Animated.View pointerEvents="none" style={{
+                position: "absolute", left: 0, top: 0, width, height: stageSize.height,
+                zIndex: 1, transform: [{ translateX: incomingX }, { scale: incomingScale }]
+              }}>
+                {renderPage(swipeTransition.to, "none")}
+              </Animated.View>
+            </>;
+          })()}
         </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
