@@ -245,13 +245,39 @@ export default function App() {
       }
     }
     if (touches.length > 1) return;
-    // A new finger must not interrupt the previous finger's settle animation.
-    // Ignore this touch until it lifts; the old swipe will finish committing or
-    // reverting the page and indicator together.
+    // If a new gesture starts while the previous swipe is settling, resolve
+    // the previous gesture to its already-decided destination first. This avoids
+    // dropping the new touch or forcing the user to wait for the animation timer.
     if (swipeSettlingRef.current) {
-      touchStartRef.current = null;
-      return;
+      swipeTopX.stopAnimation();
+      swipeBottomX.stopAnimation();
+      liquidX.stopAnimation();
+      liquidStretch.stopAnimation();
+
+      const settleTarget = swipeSettleTargetRef.current || navTabRef.current;
+      if (swipeSettleCommitRef.current && settleTarget) {
+        skipNextNavAnimationRef.current = true;
+        setNavTab(settleTarget);
+        navTabRef.current = settleTarget;
+        if (settleTarget === "Add") {
+          setPopupMounted(true);
+          setAddPopupVisible(true);
+        } else {
+          setAddPopupVisible(false);
+          setTab(settleTarget);
+        }
+      }
+      swipeTransitionRef.current = null;
+      setSwipeTransition(null);
+      swipeTopX.setValue(0);
+      swipeBottomX.setValue(0);
+      const targetIndex = tabs.findIndex(([name]) => name === settleTarget);
+      if (targetIndex >= 0 && slotWidth > 0) liquidX.setValue(targetIndex * slotWidth);
+      liquidStretch.setValue(1);
+      swipeSettleTargetRef.current = null;
+      swipeSettlingRef.current = false;
     }
+
     swipeGenerationRef.current += 1;
 
     if (!swipeTransitionRef.current) {
