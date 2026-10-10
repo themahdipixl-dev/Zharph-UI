@@ -170,8 +170,17 @@ export default function App() {
     const distance = commit ? direction * stageSize.width : 0;
     const currentOffset = lastSwipeRef.current.dx;
     const remaining = Math.abs(distance - currentOffset);
-    const settleDuration = Math.max(140, Math.min(320, 140 + remaining / Math.max(1, stageSize.width) * 180));
-    const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
+    const releaseVelocity = lastSwipeRef.current.vx || 0;
+    // Telegram-style settling: use its standard ease curve and let the release
+    // velocity influence duration, rather than using one distance-only timing.
+    const velocityTowardTarget = releaseVelocity * Math.sign(distance - currentOffset);
+    const baseDuration = 180 + (remaining / Math.max(1, stageSize.width)) * 100;
+    const velocityFactor = velocityTowardTarget > 0
+      ? Math.max(0.62, 1 - Math.min(velocityTowardTarget, 1800) / 3600)
+      : 1 + Math.min(Math.abs(velocityTowardTarget), 1200) / 6000;
+    const settleDuration = Math.max(120, Math.min(300, baseDuration * velocityFactor));
+    // Telegram's CubicBezierInterpolator.DEFAULT: cubic-bezier(.25, .1, .25, 1).
+    const settleEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
     const startIndex = Math.max(0, tabs.findIndex(([name]) => name === activeTransition.from));
     const targetIndex = Math.max(0, tabs.findIndex(([name]) => name === destination));
     // One animation controls both the page and its derived indicator.
