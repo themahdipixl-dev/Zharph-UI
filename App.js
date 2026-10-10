@@ -156,6 +156,12 @@ export default function App() {
         duration: settleDuration,
         easing: settleEasing,
         useNativeDriver: true
+      }),
+      Animated.spring(liquidStretch, {
+        toValue: 1,
+        speed: 12,
+        bounciness: 10,
+        useNativeDriver: true
       })
     ]).start(({ finished }) => {
       if (finished && commit && targetName) {
@@ -232,6 +238,11 @@ export default function App() {
       const progress = clampedDx / stageSize.width;
       const indicatorIndex = Math.max(0, Math.min(maxIndex, startIndex - progress));
       liquidX.setValue(indicatorIndex * slotWidth);
+
+      // Stretch the liquid capsule as it follows the finger, then spring it
+      // back to its normal circular shape when the swipe settles.
+      const stretch = 1 + Math.min(0.42, Math.abs(clampedDx) / stageSize.width * 0.65);
+      liquidStretch.setValue(stretch);
     }
     const now = Date.now();
     const elapsed = Math.max(1, now - lastSwipeRef.current.time);
