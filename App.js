@@ -400,7 +400,9 @@ export default function App() {
     // live touch events, so queued and ordinary swipes share one code path.
     handleTouchMove({
       nativeEvent: {
-        touches: pending.ended ? [] : [{ pageX: pending.lastX, pageY: pending.lastY }]
+        // Replay the final position even if the finger has already lifted; the
+        // gesture handler needs coordinates to establish the transition first.
+        touches: [{ pageX: pending.lastX, pageY: pending.lastY }]
       }
     });
 
