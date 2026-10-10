@@ -252,40 +252,50 @@ export default function App() {
           </View>
           {swipeTransition && stageSize.width > 0 && stageSize.height > 0 && (() => {
             const width = stageSize.width;
-            const outgoingX = swipeTopX.interpolate({
+            const height = stageSize.height;
+            const direction = swipeTransition.direction;
+            const incomingBase = direction < 0 ? width : -width;
+            const incomingX = Animated.add(swipeTopX, new Animated.Value(incomingBase));
+            const edgeX = Animated.add(
+              swipeTopX,
+              new Animated.Value(direction < 0 ? width - 54 : -width - 66)
+            );
+            const edgeScale = swipeTopX.interpolate({
               inputRange: [-width, 0, width],
-              outputRange: [-width * 0.88, 0, width * 0.88],
+              outputRange: [0.82, 1.08, 0.82],
               extrapolate: "clamp"
             });
-            const incomingX = Animated.add(
-              swipeTopX.interpolate({
-                inputRange: [-width, 0, width],
-                outputRange: [-width * 0.72, 0, width * 0.72],
-                extrapolate: "clamp"
-              }),
-              new Animated.Value(swipeTransition.direction < 0 ? width : -width)
-            );
-            const incomingScale = swipeTopX.interpolate({
+            const edgeY = swipeTopX.interpolate({
               inputRange: [-width, 0, width],
-              outputRange: [1, 0.965, 1],
+              outputRange: [0.92, 1.12, 0.92],
               extrapolate: "clamp"
             });
             return <>
               <Animated.View pointerEvents="none" style={{
-                position: "absolute", left: 0, top: 0, width, height: stageSize.height,
-                zIndex: 2, transform: [{ translateX: outgoingX }]
+                position: "absolute", left: 0, top: 0, width, height,
+                zIndex: 1, overflow: "hidden", transform: [{ translateX: incomingX }]
+              }}>
+                {renderPage(swipeTransition.to, "none")}
+              </Animated.View>
+              <Animated.View pointerEvents="none" style={{
+                position: "absolute", left: 0, top: 0, width, height,
+                zIndex: 2, overflow: "hidden", transform: [{ translateX: swipeTopX }]
               }}>
                 {renderPage(swipeTransition.from, "none")}
               </Animated.View>
               <Animated.View pointerEvents="none" style={{
-                position: "absolute", left: 0, top: 0, width, height: stageSize.height,
-                zIndex: 1, transform: [{ translateX: incomingX }, { scale: incomingScale }]
-              }}>
-                {renderPage(swipeTransition.to, "none")}
-              </Animated.View>
+                position: "absolute",
+                top: -height * 0.08,
+                left: 0,
+                width: 132,
+                height: height * 1.16,
+                borderRadius: 72,
+                backgroundColor: C.bg,
+                zIndex: 3,
+                transform: [{ translateX: edgeX }, { scaleX: edgeScale }, { scaleY: edgeY }]
+              }} />
             </>;
           })()}
-        </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
