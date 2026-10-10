@@ -155,19 +155,25 @@ export default function App() {
       if (finished && !addPopupVisible) setPopupMounted(false);
     });
   }, [addPopupVisible, popupProgress, popupOpacity]);
-  const finishSwipeTransition = (commit, targetName, direction) => {
+  const finishSwipeTransition = (destinationName, direction) => {
     if (swipeSettlingRef.current) return;
+    const activeTransition = swipeTransitionRef.current;
+    if (!activeTransition) return;
+    const destination = destinationName || activeTransition.from;
+    const commit = destination !== activeTransition.from;
     swipeSettlingRef.current = true;
     const settleGeneration = swipeGenerationRef.current;
     swipeSettleCommitRef.current = commit;
-    swipeSettleTargetRef.current = commit && targetName ? targetName : swipeStartTabRef.current;
+    swipeSettleTargetRef.current = destination;
+    // The outgoing page settles at 0; the incoming page settles at direction * width.
+    // This remains valid if the two page roles were swapped during a takeover.
     const distance = commit ? direction * stageSize.width : 0;
-    const settleDuration = commit ? 320 : 240;
+    const currentOffset = lastSwipeRef.current.dx;
+    const remaining = Math.abs(distance - currentOffset);
+    const settleDuration = Math.max(140, Math.min(320, 140 + remaining / Math.max(1, stageSize.width) * 180));
     const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
-    const startIndex = Math.max(0, tabs.findIndex(([name]) => name === swipeStartTabRef.current));
-    const targetIndex = commit && targetName
-      ? Math.max(0, tabs.findIndex(([name]) => name === targetName))
-      : startIndex;
+    const startIndex = Math.max(0, tabs.findIndex(([name]) => name === activeTransition.from));
+    const targetIndex = Math.max(0, tabs.findIndex(([name]) => name === destination));
     // One animation controls both the page and its derived indicator.
     Animated.timing(swipeTopX, {
       toValue: distance,
@@ -178,17 +184,17 @@ export default function App() {
       // A rapid new gesture can begin as this animation completes. Ignore any
       // stale completion before it commits a tab or clears a newer transition.
       if (!finished || swipeGenerationRef.current !== settleGeneration) return;
-      if (commit && targetName) {
+      if (commit) {
         // The indicator already followed the finger; don't replay the tab-click animation.
         skipNextNavAnimationRef.current = true;
-        setNavTab(targetName);
-        navTabRef.current = targetName;
-        if (targetName === "Add") {
+        setNavTab(destination);
+        navTabRef.current = destination;
+        if (destination === "Add") {
           setPopupMounted(true);
           setAddPopupVisible(true);
         } else {
           setAddPopupVisible(false);
-          setTab(targetName);
+          setTab(destination);
         }
       }
       // Remove the transition layers before resetting their animated offsets.
@@ -224,7 +230,7 @@ export default function App() {
         previousStart.multitouch = true;
         const activeTransition = swipeTransitionRef.current;
         if (previousStart.claimed && activeTransition && !swipeSettlingRef.current) {
-          finishSwipeTransition(false, null, activeTransition.direction);
+          finishSwipeTransition(activeTransition.from, activeTransition.direction);
         }
         return;
       }
@@ -237,7 +243,7 @@ export default function App() {
         if (previousStart.claimed && previousTransition && !swipeSettlingRef.current) {
           const { dx, vx } = lastSwipeRef.current;
           const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
-          finishSwipeTransition(shouldCommit, previousTransition.to, previousTransition.direction);
+          finishSwipeTransition(shouldCommit ? previousTransition.to : previousTransition.from, previousTransition.direction);
         }
         touchStartRef.current = null;
       } else {
@@ -252,25 +258,51 @@ export default function App() {
     // Take over the active settle from its exact current position. A quick
     // release is processed after the offset has been captured.
     if (swipeSettlingRef.current || swipeTransitionRef.current) {
-      const transition = swipeTransitionRef.current;
       swipeGenerationRef.current += 1;
       swipeSettlingRef.current = false;
       swipeSettleTargetRef.current = null;
       const pendingTouch = {
-        x: touch.pageX, y: touch.pageY, time: Date.now(),
-        identifier: touch.identifier, lastX: touch.pageX, lastY: touch.pageY, released: false
+        x: touch.pageX, y: touch.pageY, localX: touch.locationX,
+        time: Date.now(), identifier: touch.identifier,
+        lastX: touch.pageX, lastY: touch.pageY, released: false
       };
       interruptingTouchRef.current = pendingTouch;
       swipeTopX.stopAnimation(value => {
         if (interruptingTouchRef.current !== pendingTouch) return;
-        const offset = typeof value === "number" ? value : 0;
+        let offset = typeof value === "number" ? value : 0;
+        let activeTransition = swipeTransitionRef.current;
+
+        // Telegram promotes the page under the new finger to the tracked page.
+        // Rebase the offset so both pages remain at their exact rendered positions.
+        if (activeTransition && stageSize.width > 0) {
+          const width = stageSize.width;
+          const incomingX = offset + (activeTransition.direction < 0 ? width : -width);
+          const visibleLeft = Math.max(0, incomingX);
+          const visibleRight = Math.min(width, incomingX + width);
+          const touchX = typeof pendingTouch.localX === "number" ? pendingTouch.localX : pendingTouch.x;
+          const touchesIncoming = visibleRight > visibleLeft && touchX >= visibleLeft && touchX <= visibleRight;
+          if (touchesIncoming) {
+            const previousFrom = activeTransition.from;
+            activeTransition = {
+              from: activeTransition.to,
+              to: previousFrom,
+              direction: -activeTransition.direction
+            };
+            offset = incomingX;
+            swipeTransitionRef.current = activeTransition;
+            swipeStartTabRef.current = activeTransition.from;
+            setSwipeTransition(activeTransition);
+          }
+        }
+
         swipeTopX.setValue(offset);
-        const startTab = transition?.from || navTabRef.current;
-        if (transition) swipeStartTabRef.current = transition.from;
+        const startTab = activeTransition?.from || navTabRef.current;
+        if (activeTransition) swipeStartTabRef.current = activeTransition.from;
         touchStartRef.current = {
           x: pendingTouch.x, y: pendingTouch.y, time: pendingTouch.time,
-          tab: startTab, claimed: !!transition, interrupted: !!transition,
-          moved: false, baseOffset: offset, identifier: pendingTouch.identifier, multitouch: false
+          tab: startTab, claimed: !!activeTransition, interrupted: !!activeTransition,
+          rebased: !!activeTransition, moved: false, baseOffset: offset,
+          identifier: pendingTouch.identifier, multitouch: false
         };
         lastSwipeRef.current = { dx: offset, vx: 0, time: pendingTouch.time };
         interruptingTouchRef.current = null;
@@ -380,17 +412,26 @@ export default function App() {
     touchStartRef.current = null;
     const transition = swipeTransitionRef.current;
     if (start?.multitouch) {
-      if (transition && !swipeSettlingRef.current) finishSwipeTransition(false, null, transition.direction);
+      if (transition && !swipeSettlingRef.current) finishSwipeTransition(transition.from, transition.direction);
       return;
     }
     if (!start?.claimed || !transition || swipeSettlingRef.current) return;
-    // A takeover never freezes on release: settle from current offset and
-    // velocity, just as Telegram's pager does.
     const { dx, vx } = lastSwipeRef.current;
-    const threshold = Math.max(64, stageSize.width * 0.22);
-    const velocityCommits = vx * transition.direction > 550;
-    const shouldCommit = Math.abs(dx) > threshold || velocityCommits;
-    finishSwipeTransition(shouldCommit, transition.to, transition.direction);
+    let destination;
+    if (start.rebased) {
+      // Rebased gestures can begin anywhere between the two stable endpoints.
+      // Choose the nearest endpoint unless release velocity clearly favors one.
+      const distanceToFrom = Math.abs(dx);
+      const distanceToTarget = Math.abs(transition.direction * stageSize.width - dx);
+      if (vx * transition.direction > 550) destination = transition.to;
+      else if (vx * transition.direction < -550) destination = transition.from;
+      else destination = distanceToTarget < distanceToFrom ? transition.to : transition.from;
+    } else {
+      const threshold = Math.max(64, stageSize.width * 0.22);
+      const velocityCommits = vx * transition.direction > 550;
+      destination = Math.abs(dx) > threshold || velocityCommits ? transition.to : transition.from;
+    }
+    finishSwipeTransition(destination, transition.direction);
   };
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
