@@ -204,10 +204,15 @@ export default function App() {
         swipeBottomX.setValue(0);
         swipeSettleTargetRef.current = null;
         swipeSettlingRef.current = false;
+        // Preserve a swipe that began during the settle animation. Replay its
+        // recorded movement only after the previous page transition is fully
+        // committed and the animated layers have been reset.
+        resumePendingSwipe();
       });
     });
   };
   const touchStartRef = useRef(null);
+  const pendingSwipeRef = useRef(null);
   const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
   const handleTouchStart = (event) => {
     const touches = event.nativeEvent.touches;
@@ -244,38 +249,26 @@ export default function App() {
         return;
       }
     }
-    if (touches.length > 1) return;
-    // If a new gesture starts while the previous swipe is settling, resolve
-    // the previous gesture to its already-decided destination first. This avoids
-    // dropping the new touch or forcing the user to wait for the animation timer.
+    if (touches.length > 1) {
+      // Multitouch is not a queued navigation gesture.
+      pendingSwipeRef.current = null;
+      return;
+    }
     if (swipeSettlingRef.current) {
-      swipeTopX.stopAnimation();
-      swipeBottomX.stopAnimation();
-      liquidX.stopAnimation();
-      liquidStretch.stopAnimation();
-
-      const settleTarget = swipeSettleTargetRef.current || navTabRef.current;
-      if (swipeSettleCommitRef.current && settleTarget) {
-        skipNextNavAnimationRef.current = true;
-        setNavTab(settleTarget);
-        navTabRef.current = settleTarget;
-        if (settleTarget === "Add") {
-          setPopupMounted(true);
-          setAddPopupVisible(true);
-        } else {
-          setAddPopupVisible(false);
-          setTab(settleTarget);
-        }
-      }
-      swipeTransitionRef.current = null;
-      setSwipeTransition(null);
-      swipeTopX.setValue(0);
-      swipeBottomX.setValue(0);
-      const targetIndex = tabs.findIndex(([name]) => name === settleTarget);
-      if (targetIndex >= 0 && slotWidth > 0) liquidX.setValue(targetIndex * slotWidth);
-      liquidStretch.setValue(1);
-      swipeSettleTargetRef.current = null;
-      swipeSettlingRef.current = false;
+      // Do not tear down a transition that is already settling. Buffer the new
+      // gesture instead; its movement will be replayed against the committed
+      // destination when the current animation has completely finished.
+      pendingSwipeRef.current = {
+        startX: touch.pageX,
+        startY: touch.pageY,
+        lastX: touch.pageX,
+        lastY: touch.pageY,
+        startTime: Date.now(),
+        lastTime: Date.now(),
+        vx: 0,
+        ended: false
+      };
+      return;
     }
 
     swipeGenerationRef.current += 1;
@@ -296,8 +289,22 @@ export default function App() {
     lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
   const handleTouchMove = (event) => {
-    const start = touchStartRef.current;
     const touch = event.nativeEvent.touches?.[0];
+    if (swipeSettlingRef.current && pendingSwipeRef.current) {
+      const pending = pendingSwipeRef.current;
+      if (!touch || (event.nativeEvent.touches?.length ?? 0) > 1) {
+        pendingSwipeRef.current = null;
+        return;
+      }
+      const now = Date.now();
+      const elapsed = Math.max(1, now - pending.lastTime);
+      pending.vx = (touch.pageX - pending.lastX) / elapsed * 1000;
+      pending.lastX = touch.pageX;
+      pending.lastY = touch.pageY;
+      pending.lastTime = now;
+      return;
+    }
+    const start = touchStartRef.current;
     if (!start || start.multitouch || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
     const dx = touch.pageX - start.x;
     const dy = touch.pageY - start.y;
@@ -346,6 +353,16 @@ export default function App() {
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
   };
   const handleTouchEnd = (event) => {
+    // A gesture buffered during settle is completed after the current transition
+    // finishes. Ignore intermediate finger lifts while other touches remain.
+    if (swipeSettlingRef.current && pendingSwipeRef.current) {
+      if ((event?.nativeEvent?.touches?.length ?? 0) === 0) {
+        pendingSwipeRef.current.ended = true;
+      } else if ((event?.nativeEvent?.touches?.length ?? 0) > 1) {
+        pendingSwipeRef.current = null;
+      }
+      return;
+    }
     // React Native sends touch-end when any finger lifts, not only when the
     // whole gesture ends. Wait until no fingers remain on the screen.
     if ((event?.nativeEvent?.touches?.length ?? 0) > 0) return;
@@ -361,6 +378,47 @@ export default function App() {
     const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
     finishSwipeTransition(shouldCommit, transition.to, transition.direction);
   };
+  const resumePendingSwipe = () => {
+    const pending = pendingSwipeRef.current;
+    if (!pending || swipeSettlingRef.current || swipeTransitionRef.current) return;
+    pendingSwipeRef.current = null;
+
+    const startTab = navTabRef.current;
+    const startTime = pending.startTime;
+    touchStartRef.current = {
+      x: pending.startX,
+      y: pending.startY,
+      time: startTime,
+      tab: startTab,
+      claimed: false,
+      multitouch: false,
+      identifier: undefined
+    };
+    lastSwipeRef.current = { dx: 0, vx: 0, time: startTime };
+
+    // Replay the last known position through the same gesture handler used by
+    // live touch events, so queued and ordinary swipes share one code path.
+    handleTouchMove({
+      nativeEvent: {
+        touches: pending.ended ? [] : [{ pageX: pending.lastX, pageY: pending.lastY }]
+      }
+    });
+
+    const dx = pending.lastX - pending.startX;
+    if (touchStartRef.current?.claimed) {
+      lastSwipeRef.current = { dx, vx: pending.vx, time: pending.lastTime };
+    }
+
+    if (pending.ended) {
+      const start = touchStartRef.current;
+      const transition = swipeTransitionRef.current;
+      touchStartRef.current = null;
+      if (!start?.claimed || !transition) return;
+      const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(pending.vx) > 550;
+      finishSwipeTransition(shouldCommit, transition.to, transition.direction);
+    }
+  };
+
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
