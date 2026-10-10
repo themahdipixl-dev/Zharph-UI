@@ -155,11 +155,16 @@ export default function App() {
           setTab(targetName);
         }
       }
-      swipeTopX.setValue(0);
-      swipeBottomX.setValue(0);
+      // Remove the transition layers before resetting their animated offsets.
+      // Resetting first can briefly put the outgoing (old) page back at x=0,
+      // causing it to flash over the newly selected page on some renders.
       swipeTransitionRef.current = null;
       setSwipeTransition(null);
-      swipeSettlingRef.current = false;
+      requestAnimationFrame(() => {
+        swipeTopX.setValue(0);
+        swipeBottomX.setValue(0);
+        swipeSettlingRef.current = false;
+      });
     });
   };
   const touchStartRef = useRef(null);
