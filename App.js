@@ -254,46 +254,50 @@ export default function App() {
             const width = stageSize.width;
             const height = stageSize.height;
             const direction = swipeTransition.direction;
-            const incomingBase = direction < 0 ? width : -width;
-            const incomingX = Animated.add(swipeTopX, new Animated.Value(incomingBase));
-            const edgeX = Animated.add(
-              swipeTopX,
-              new Animated.Value(direction < 0 ? width - 54 : -width - 66)
-            );
-            const edgeScale = swipeTopX.interpolate({
+            const outgoingX = swipeTopX.interpolate({
               inputRange: [-width, 0, width],
-              outputRange: [0.82, 1.08, 0.82],
+              outputRange: [-width * 0.3, 0, width * 0.3],
               extrapolate: "clamp"
             });
-            const edgeY = swipeTopX.interpolate({
-              inputRange: [-width, 0, width],
-              outputRange: [0.92, 1.12, 0.92],
+            const incomingX = Animated.add(
+              outgoingX,
+              new Animated.Value(direction < 0 ? width * 0.3 : -width * 0.3)
+            );
+            const incomingOpacity = swipeTopX.interpolate({
+              inputRange: direction < 0 ? [-width, 0] : [0, width],
+              outputRange: direction < 0 ? [1, 0] : [0, 1],
+              extrapolate: "clamp"
+            });
+            const outgoingOpacity = swipeTopX.interpolate({
+              inputRange: direction < 0 ? [-width, 0] : [0, width],
+              outputRange: direction < 0 ? [0.72, 1] : [1, 0.72],
+              extrapolate: "clamp"
+            });
+            const incomingScale = swipeTopX.interpolate({
+              inputRange: direction < 0 ? [-width, 0] : [0, width],
+              outputRange: direction < 0 ? [1, 0.92] : [0.92, 1],
+              extrapolate: "clamp"
+            });
+            const outgoingScale = swipeTopX.interpolate({
+              inputRange: direction < 0 ? [-width, 0] : [0, width],
+              outputRange: direction < 0 ? [0.96, 1] : [1, 0.96],
               extrapolate: "clamp"
             });
             return <>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 1, overflow: "hidden", transform: [{ translateX: incomingX }]
+                zIndex: 1, overflow: "hidden", opacity: incomingOpacity,
+                transform: [{ translateX: incomingX }, { scale: incomingScale }]
               }}>
                 {renderPage(swipeTransition.to, "none")}
               </Animated.View>
               <Animated.View pointerEvents="none" style={{
                 position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 2, overflow: "hidden", transform: [{ translateX: swipeTopX }]
+                zIndex: 2, overflow: "hidden", opacity: outgoingOpacity,
+                transform: [{ translateX: outgoingX }, { scale: outgoingScale }]
               }}>
                 {renderPage(swipeTransition.from, "none")}
               </Animated.View>
-              <Animated.View pointerEvents="none" style={{
-                position: "absolute",
-                top: -height * 0.08,
-                left: 0,
-                width: 132,
-                height: height * 1.16,
-                borderRadius: 72,
-                backgroundColor: C.bg,
-                zIndex: 3,
-                transform: [{ translateX: edgeX }, { scaleX: edgeScale }, { scaleY: edgeY }]
-              }} />
             </>;
           })()}
         {popupMounted && <>
