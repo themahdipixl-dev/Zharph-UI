@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated } from "react-native";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, PanResponder } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -49,6 +49,14 @@ export default function App() {
   const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
+  const [curtainHeight, setCurtainHeight] = useState(0);
+  const curtainProgress = useRef(new Animated.Value(0)).current;
+  const curtainBusy = useRef(false);
+  const navTabRef = useRef(navTab);
+  const addPopupVisibleRef = useRef(addPopupVisible);
+  navTabRef.current = navTab;
+  addPopupVisibleRef.current = addPopupVisible;
+  const navigateToTabRef = useRef(null);
   const popupProgress = useRef(new Animated.Value(0)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -122,6 +130,51 @@ export default function App() {
       if (finished && !addPopupVisible) setPopupMounted(false);
     });
   }, [addPopupVisible, popupProgress, popupOpacity]);
+  const navigateToTab = (targetName) => {
+    if (curtainBusy.current || targetName === navTabRef.current) return;
+    const targetIsAdd = targetName === "Add";
+    curtainBusy.current = true;
+    curtainProgress.stopAnimation();
+    if (addPopupVisibleRef.current) setAddPopupVisible(false);
+    Animated.timing(curtainProgress, {
+      toValue: 1,
+      duration: 190,
+      useNativeDriver: true
+    }).start(({ finished }) => {
+      if (!finished) {
+        curtainBusy.current = false;
+        return;
+      }
+      setNavTab(targetName);
+      navTabRef.current = targetName;
+      if (targetIsAdd) {
+        setPopupMounted(true);
+        setAddPopupVisible(true);
+      } else {
+        setTab(targetName);
+        setAddPopupVisible(false);
+      }
+      Animated.timing(curtainProgress, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true
+      }).start(() => {
+        curtainBusy.current = false;
+      });
+    });
+  };
+  navigateToTabRef.current = navigateToTab;
+  const swipeResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) =>
+      Math.abs(gesture.dx) > 16 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.25,
+    onPanResponderRelease: (_, gesture) => {
+      if (Math.abs(gesture.dx) < 55 && Math.abs(gesture.vx) < 0.45) return;
+      const currentIndex = tabs.findIndex(([name]) => name === navTabRef.current);
+      const nextIndex = currentIndex + (gesture.dx < 0 ? 1 : -1);
+      if (nextIndex < 0 || nextIndex >= tabs.length) return;
+      navigateToTabRef.current?.(tabs[nextIndex][0]);
+    }
+  })).current;
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const addPhoto = async () => {
@@ -135,7 +188,7 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
-        <View style={{flex:1}}>
+        <View style={{flex:1}} onLayout={event => setCurtainHeight(event.nativeEvent.layout.height)} {...swipeResponder.panHandlers}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
           <View style={s.header}>
             <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
@@ -150,6 +203,16 @@ export default function App() {
             </View>
             </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={tab==="Depth"?"layers":tab==="Saved"?"bookmark":tab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{tab==="Editor"?"Wallpaper editor":tab}</Text><Text style={s.placeholderText}>{tab==="Depth"?"Choose a photo to start creating a depth wallpaper.":tab==="Saved"?"Your saved wallpapers will appear here.":tab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
         </ScrollView>
+        {curtainHeight > 0 && <>
+          <Animated.View pointerEvents="none" style={[s.curtainTop, {
+            height: curtainHeight / 2,
+            transform: [{ translateY: curtainProgress.interpolate({ inputRange: [0, 1], outputRange: [-curtainHeight / 2, 0] }) }]
+          }]} />
+          <Animated.View pointerEvents="none" style={[s.curtainBottom, {
+            height: curtainHeight / 2,
+            transform: [{ translateY: curtainProgress.interpolate({ inputRange: [0, 1], outputRange: [curtainHeight / 2, 0] }) }]
+          }]} />
+        </>}
         </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
@@ -182,6 +245,6 @@ const s=StyleSheet.create({
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},
- popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,backgroundColor:"rgba(0,0,0,0.22)"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"relative",zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
+ curtainTop:{position:"absolute",top:0,left:0,right:0,backgroundColor:C.bg,zIndex:8},curtainBottom:{position:"absolute",bottom:0,left:0,right:0,backgroundColor:C.bg,zIndex:8},popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,backgroundColor:"rgba(0,0,0,0.22)"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"relative",zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,marginHorizontal:16,marginTop:2,marginBottom:14,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
