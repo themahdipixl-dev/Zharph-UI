@@ -45,6 +45,7 @@ export default function App() {
   const liquidStretch = useRef(new Animated.Value(1)).current;
   const liquidTapX = useRef(new Animated.Value(1)).current;
   const liquidTapY = useRef(new Animated.Value(1)).current;
+  const skipNextNavAnimationRef = useRef(false);
   const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
   const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
@@ -66,6 +67,10 @@ export default function App() {
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
     if (activeIndex < 0) return;
+    if (skipNextNavAnimationRef.current) {
+      skipNextNavAnimationRef.current = false;
+      return;
+    }
     const slot = activeIndex;
     Animated.parallel([
       Animated.spring(liquidX, {
@@ -138,13 +143,35 @@ export default function App() {
     if (swipeSettlingRef.current) return;
     swipeSettlingRef.current = true;
     const distance = commit ? direction * stageSize.width : 0;
-    Animated.timing(swipeTopX, {
-      toValue: distance,
-      duration: commit ? 320 : 240,
-      easing: commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: true
-    }).start(({ finished }) => {
+    const settleDuration = commit ? 320 : 240;
+    const settleEasing = commit ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1);
+    const startIndex = Math.max(0, tabs.findIndex(([name]) => name === swipeStartTabRef.current));
+    const targetIndex = commit && targetName
+      ? Math.max(0, tabs.findIndex(([name]) => name === targetName))
+      : startIndex;
+    Animated.parallel([
+      Animated.timing(swipeTopX, {
+        toValue: distance,
+        duration: settleDuration,
+        easing: settleEasing,
+        useNativeDriver: true
+      }),
+      Animated.timing(liquidX, {
+        toValue: targetIndex * slotWidth,
+        duration: settleDuration,
+        easing: settleEasing,
+        useNativeDriver: true
+      }),
+      Animated.spring(liquidStretch, {
+        toValue: 1,
+        speed: 12,
+        bounciness: 10,
+        useNativeDriver: true
+      })
+    ]).start(({ finished }) => {
       if (finished && commit && targetName) {
+        // The indicator already followed the finger; don't replay the tab-click animation.
+        skipNextNavAnimationRef.current = true;
         setNavTab(targetName);
         navTabRef.current = targetName;
         if (targetName === "Add") {
@@ -205,6 +232,16 @@ export default function App() {
     const clampedDx = Math.max(-stageSize.width, Math.min(stageSize.width, dx));
     swipeTopX.setValue(clampedDx);
     swipeBottomX.setValue(clampedDx);
+    // Keep the liquid indicator directly under the swipe progress.
+    if (slotWidth > 0) {
+      const startIndex = Math.max(0, tabs.findIndex(([name]) => name === start.tab));
+      const maxIndex = tabs.length - 1;
+      const progress = clampedDx / stageSize.width;
+      const indicatorIndex = Math.max(0, Math.min(maxIndex, startIndex - progress));
+      liquidX.setValue(indicatorIndex * slotWidth);
+      const stretch = 1 + Math.min(0.42, Math.abs(clampedDx) / stageSize.width * 0.65);
+      liquidStretch.setValue(stretch);
+    }
     const now = Date.now();
     const elapsed = Math.max(1, now - lastSwipeRef.current.time);
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
