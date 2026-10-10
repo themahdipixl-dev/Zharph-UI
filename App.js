@@ -158,7 +158,6 @@ export default function App() {
       Animated.timing(liquidX, {
         toValue: targetIndex * slotWidth,
         duration: settleDuration,
-        easing: settleEasing,
         useNativeDriver: true
       }),
       Animated.spring(liquidStretch, {
