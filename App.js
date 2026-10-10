@@ -204,15 +204,11 @@ export default function App() {
         swipeBottomX.setValue(0);
         swipeSettleTargetRef.current = null;
         swipeSettlingRef.current = false;
-        // Preserve a swipe that began during the settle animation. Replay its
-        // recorded movement only after the previous page transition is fully
-        // committed and the animated layers have been reset.
-        resumePendingSwipe();
       });
     });
   };
   const touchStartRef = useRef(null);
-  const pendingSwipeRef = useRef(null);
+  const interruptingTouchRef = useRef(null);
   const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
   const handleTouchStart = (event) => {
     const touches = event.nativeEvent.touches;
@@ -250,64 +246,120 @@ export default function App() {
       }
     }
     if (touches.length > 1) {
-      // Multitouch is not a queued navigation gesture.
-      pendingSwipeRef.current = null;
+      interruptingTouchRef.current = null;
       return;
     }
-    if (swipeSettlingRef.current) {
-      // Do not tear down a transition that is already settling. Buffer the new
-      // gesture instead; its movement will be replayed against the committed
-      // destination when the current animation has completely finished.
-      pendingSwipeRef.current = {
-        startX: touch.pageX,
-        startY: touch.pageY,
-        lastX: touch.pageX,
-        lastY: touch.pageY,
-        startTime: Date.now(),
-        lastTime: Date.now(),
-        vx: 0,
-        ended: false
+
+    // A new touch takes ownership of an in-flight settle. Stop at the exact
+    // rendered offsets instead of forcing the previous destination or queueing
+    // work for later. Keep the two pages mounted at that frozen position.
+    if (swipeSettlingRef.current || swipeTransitionRef.current) {
+      const transition = swipeTransitionRef.current;
+      if (!transition) {
+        swipeSettlingRef.current = false;
+        swipeSettleTargetRef.current = null;
+      }
+      swipeGenerationRef.current += 1;
+      swipeSettlingRef.current = false;
+      swipeSettleTargetRef.current = null;
+      swipeTopX.stopAnimation();
+      swipeBottomX.stopAnimation();
+      liquidX.stopAnimation();
+      liquidStretch.stopAnimation();
+
+      const captured = { top: 0, indicator: 0, stretch: 1, count: 0 };
+      const finishCapture = () => {
+        captured.count += 1;
+        if (captured.count !== 3) return;
+        // A later touch may have replaced this one while native values were
+        // being returned; only initialize the currently pending touch.
+        const pendingTouch = interruptingTouchRef.current;
+        if (!pendingTouch) return;
+        swipeTopX.setValue(captured.top);
+        swipeBottomX.setValue(captured.top);
+        liquidX.setValue(captured.indicator);
+        liquidStretch.setValue(captured.stretch);
+        const startTab = transition?.from || navTabRef.current;
+        if (transition) {
+          swipeStartTabRef.current = transition.from;
+        }
+        touchStartRef.current = {
+          x: pendingTouch.x,
+          y: pendingTouch.y,
+          time: pendingTouch.time,
+          tab: startTab,
+          claimed: !!transition,
+          interrupted: !!transition,
+          moved: false,
+          baseOffset: captured.top,
+          identifier: pendingTouch.identifier,
+          multitouch: false
+        };
+        lastSwipeRef.current = { dx: captured.top, vx: 0, time: pendingTouch.time };
+        interruptingTouchRef.current = null;
+        if (typeof pendingTouch.lastX === "number" && pendingTouch.lastX !== pendingTouch.x) {
+          handleTouchMove({ nativeEvent: { touches: [{ pageX: pendingTouch.lastX, pageY: pendingTouch.lastY }] } });
+        }
       };
+      interruptingTouchRef.current = {
+        x: touch.pageX, y: touch.pageY, time: Date.now(), identifier: touch.identifier
+      };
+      swipeTopX.stopAnimation(value => { captured.top = typeof value === "number" ? value : 0; finishCapture(); });
+      liquidX.stopAnimation(value => { captured.indicator = typeof value === "number" ? value : 0; finishCapture(); });
+      liquidStretch.stopAnimation(value => { captured.stretch = typeof value === "number" ? value : 1; finishCapture(); });
       return;
     }
 
     swipeGenerationRef.current += 1;
-
-    if (!swipeTransitionRef.current) {
-      // A very fast lift-and-retouch can interrupt the spring between two tabs.
-      // Normalize the indicator before recording the next gesture so it cannot
-      // remain stranded between icons.
-      liquidX.stopAnimation();
-      liquidStretch.stopAnimation();
-      const activeIndex = tabs.findIndex(([name]) => name === navTabRef.current);
-      if (activeIndex >= 0 && slotWidth > 0) liquidX.setValue(activeIndex * slotWidth);
-      liquidStretch.setValue(1);
-    }
+    liquidX.stopAnimation();
+    liquidStretch.stopAnimation();
+    const activeIndex = tabs.findIndex(([name]) => name === navTabRef.current);
+    if (activeIndex >= 0 && slotWidth > 0) liquidX.setValue(activeIndex * slotWidth);
+    liquidStretch.setValue(1);
 
     const startTab = navTabRef.current;
-    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false, multitouch: false, identifier: touch.identifier };
+    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false, interrupted: false, moved: false, baseOffset: 0, multitouch: false, identifier: touch.identifier };
     lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
   const handleTouchMove = (event) => {
     const touch = event.nativeEvent.touches?.[0];
-    if (swipeSettlingRef.current && pendingSwipeRef.current) {
-      const pending = pendingSwipeRef.current;
-      if (!touch || (event.nativeEvent.touches?.length ?? 0) > 1) {
-        pendingSwipeRef.current = null;
-        return;
+    if (interruptingTouchRef.current) {
+      // If movement arrives before stopAnimation callbacks, retain the latest
+      // coordinates and process them once the current animated values are frozen.
+      if (touch) {
+        interruptingTouchRef.current.lastX = touch.pageX;
+        interruptingTouchRef.current.lastY = touch.pageY;
       }
-      const now = Date.now();
-      const elapsed = Math.max(1, now - pending.lastTime);
-      pending.vx = (touch.pageX - pending.lastX) / elapsed * 1000;
-      pending.lastX = touch.pageX;
-      pending.lastY = touch.pageY;
-      pending.lastTime = now;
       return;
     }
     const start = touchStartRef.current;
     if (!start || start.multitouch || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
-    const dx = touch.pageX - start.x;
+    const fingerDx = touch.pageX - start.x;
     const dy = touch.pageY - start.y;
+    const dx = start.interrupted ? start.baseOffset + fingerDx : fingerDx;
+    if (start.interrupted) {
+      if (Math.abs(fingerDx) < 1 && Math.abs(dy) < 1) return;
+      start.moved = true;
+      const transition = swipeTransitionRef.current;
+      if (!transition) return;
+      // Keep the current neighbor while the finger controls the frozen transition.
+      // Moving against its direction brings the pages back toward their origin.
+      const clampedDx = transition.direction < 0
+        ? Math.max(-stageSize.width, Math.min(0, dx))
+        : Math.max(0, Math.min(stageSize.width, dx));
+      swipeTopX.setValue(clampedDx);
+      swipeBottomX.setValue(clampedDx);
+      if (slotWidth > 0) {
+        const startIndex = Math.max(0, tabs.findIndex(([name]) => name === transition.from));
+        const indicatorIndex = Math.max(0, Math.min(tabs.length - 1, startIndex - clampedDx / stageSize.width));
+        liquidX.setValue(indicatorIndex * slotWidth);
+        liquidStretch.setValue(1 + Math.min(0.42, Math.abs(clampedDx) / stageSize.width * 0.65));
+      }
+      const now = Date.now();
+      const elapsed = Math.max(1, now - lastSwipeRef.current.time);
+      lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
+      return;
+    }
     if (!start.claimed) {
       if (Math.abs(dx) < 10 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
       const currentIndex = tabs.findIndex(([name]) => name === start.tab);
@@ -353,13 +405,9 @@ export default function App() {
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
   };
   const handleTouchEnd = (event) => {
-    // A gesture buffered during settle is completed after the current transition
-    // finishes. Ignore intermediate finger lifts while other touches remain.
-    if (swipeSettlingRef.current && pendingSwipeRef.current) {
+    if (interruptingTouchRef.current) {
       if ((event?.nativeEvent?.touches?.length ?? 0) === 0) {
-        pendingSwipeRef.current.ended = true;
-      } else if ((event?.nativeEvent?.touches?.length ?? 0) > 1) {
-        pendingSwipeRef.current = null;
+        interruptingTouchRef.current = null;
       }
       return;
     }
@@ -374,53 +422,15 @@ export default function App() {
       return;
     }
     if (!start?.claimed || !transition || swipeSettlingRef.current) return;
+    // Merely touching an in-flight animation freezes it in place. Do not
+    // auto-commit it until the user actually moves the finger again.
+    if (start.interrupted && !start.moved) return;
     const { dx, vx } = lastSwipeRef.current;
-    const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
+    const threshold = Math.max(64, stageSize.width * 0.22);
+    const velocityCommits = vx * transition.direction < -550;
+    const shouldCommit = Math.abs(dx) > threshold || velocityCommits;
     finishSwipeTransition(shouldCommit, transition.to, transition.direction);
   };
-  const resumePendingSwipe = () => {
-    const pending = pendingSwipeRef.current;
-    if (!pending || swipeSettlingRef.current || swipeTransitionRef.current) return;
-    pendingSwipeRef.current = null;
-
-    const startTab = navTabRef.current;
-    const startTime = pending.startTime;
-    touchStartRef.current = {
-      x: pending.startX,
-      y: pending.startY,
-      time: startTime,
-      tab: startTab,
-      claimed: false,
-      multitouch: false,
-      identifier: undefined
-    };
-    lastSwipeRef.current = { dx: 0, vx: 0, time: startTime };
-
-    // Replay the last known position through the same gesture handler used by
-    // live touch events, so queued and ordinary swipes share one code path.
-    handleTouchMove({
-      nativeEvent: {
-        // Replay the final position even if the finger has already lifted; the
-        // gesture handler needs coordinates to establish the transition first.
-        touches: [{ pageX: pending.lastX, pageY: pending.lastY }]
-      }
-    });
-
-    const dx = pending.lastX - pending.startX;
-    if (touchStartRef.current?.claimed) {
-      lastSwipeRef.current = { dx, vx: pending.vx, time: pending.lastTime };
-    }
-
-    if (pending.ended) {
-      const start = touchStartRef.current;
-      const transition = swipeTransitionRef.current;
-      touchStartRef.current = null;
-      if (!start?.claimed || !transition) return;
-      const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(pending.vx) > 550;
-      finishSwipeTransition(shouldCommit, transition.to, transition.direction);
-    }
-  };
-
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
