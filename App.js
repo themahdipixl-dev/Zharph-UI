@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, PanResponder } from "react-native";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -163,54 +163,62 @@ export default function App() {
       swipeSettlingRef.current = false;
     });
   };
-  const canClaimHorizontalSwipe = (gesture) => {
-    if (Math.abs(gesture.dx) <= 8 || Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.15 || swipeSettlingRef.current) return false;
-    const currentIndex = tabs.findIndex(([name]) => name === navTabRef.current);
-    const nextIndex = currentIndex + (gesture.dx < 0 ? 1 : -1);
-    return nextIndex >= 0 && nextIndex < tabs.length;
+  const touchStartRef = useRef(null);
+  const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
+  const handleTouchStart = (event) => {
+    const touch = event.nativeEvent.touches?.[0];
+    if (!touch || swipeSettlingRef.current) return;
+    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: navTabRef.current, claimed: false };
+    lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
-  const swipeResponder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onStartShouldSetPanResponderCapture: () => false,
-    onMoveShouldSetPanResponder: (_, gesture) => canClaimHorizontalSwipe(gesture),
-    onMoveShouldSetPanResponderCapture: (_, gesture) => canClaimHorizontalSwipe(gesture),
-    onPanResponderGrant: () => {
-      swipeStartTabRef.current = navTabRef.current;
-      swipeTransitionRef.current = null;
-      swipeTopX.setValue(0);
-      swipeBottomX.setValue(0);
-    },
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderMove: (_, gesture) => {
-      if (swipeSettlingRef.current || stageSize.width <= 0) return;
-      const direction = gesture.dx < 0 ? -1 : 1;
-      const currentIndex = tabs.findIndex(([name]) => name === swipeStartTabRef.current);
+  const handleTouchMove = (event) => {
+    const start = touchStartRef.current;
+    const touch = event.nativeEvent.touches?.[0];
+    if (!start || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
+    const dx = touch.pageX - start.x;
+    const dy = touch.pageY - start.y;
+    if (!start.claimed) {
+      if (Math.abs(dx) < 10 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
+      const currentIndex = tabs.findIndex(([name]) => name === start.tab);
+      const nextIndex = currentIndex + (dx < 0 ? 1 : -1);
+      if (nextIndex < 0 || nextIndex >= tabs.length) return;
+      start.claimed = true;
+      swipeStartTabRef.current = start.tab;
+      const transition = { from: start.tab, to: tabs[nextIndex][0], direction: dx < 0 ? -1 : 1 };
+      swipeTransitionRef.current = transition;
+      setSwipeTransition(transition);
+      if (addPopupVisibleRef.current) setAddPopupVisible(false);
+    }
+    const transition = swipeTransitionRef.current;
+    if (!transition) return;
+    const direction = dx < 0 ? -1 : 1;
+    if (transition.direction !== direction) {
+      const currentIndex = tabs.findIndex(([name]) => name === start.tab);
       const nextIndex = currentIndex + (direction < 0 ? 1 : -1);
       if (nextIndex < 0 || nextIndex >= tabs.length) return;
-      if (!swipeTransitionRef.current) {
-        const transition = { from: swipeStartTabRef.current, to: tabs[nextIndex][0], direction };
-        swipeTransitionRef.current = transition;
-        setSwipeTransition(transition);
-        if (addPopupVisibleRef.current) setAddPopupVisible(false);
-      }
-      const activeTransition = swipeTransitionRef.current;
-      if (activeTransition.direction !== direction) return;
-      const dx = Math.max(-stageSize.width, Math.min(stageSize.width, gesture.dx));
-      swipeTopX.setValue(dx);
-      swipeBottomX.stopAnimation();
-      Animated.timing(swipeBottomX, { toValue: dx, duration: 42, useNativeDriver: true }).start();
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const transition = swipeTransitionRef.current;
-      if (!transition || swipeSettlingRef.current) return;
-      const shouldCommit = Math.abs(gesture.dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(gesture.vx) > 0.55;
-      finishSwipeTransition(shouldCommit, transition.to, transition.direction);
-    },
-    onPanResponderTerminate: () => {
-      const transition = swipeTransitionRef.current;
-      if (transition && !swipeSettlingRef.current) finishSwipeTransition(false, null, transition.direction);
+      const updated = { from: start.tab, to: tabs[nextIndex][0], direction };
+      swipeTransitionRef.current = updated;
+      setSwipeTransition(updated);
+      swipeTopX.setValue(0);
+      swipeBottomX.setValue(0);
     }
-  })).current;
+    const active = swipeTransitionRef.current;
+    const clampedDx = Math.max(-stageSize.width, Math.min(stageSize.width, dx));
+    swipeTopX.setValue(clampedDx);
+    swipeBottomX.setValue(clampedDx);
+    const now = Date.now();
+    const elapsed = Math.max(1, now - lastSwipeRef.current.time);
+    lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
+  };
+  const handleTouchEnd = () => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    const transition = swipeTransitionRef.current;
+    if (!start?.claimed || !transition || swipeSettlingRef.current) return;
+    const { dx, vx } = lastSwipeRef.current;
+    const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
+    finishSwipeTransition(shouldCommit, transition.to, transition.direction);
+  };
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
@@ -240,7 +248,7 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
-        <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} {...swipeResponder.panHandlers}>
+        <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
           <View pointerEvents={swipeTransition ? "none" : "auto"} style={{flex:1, opacity: swipeTransition ? 0 : 1}}>
             {renderPage(tab)}
           </View>
