@@ -57,6 +57,7 @@ export default function App() {
     acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1);
     return acc;
   }, {})).current;
+  const addIconRotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const activeIndex = tabs.findIndex(([name]) => name === navTab);
@@ -190,6 +191,13 @@ export default function App() {
             return <Pressable key={name} onPress={() => {
               if (name === navTab) animateLiquidTap();
               if (name === "Add") {
+                addIconRotation.stopAnimation();
+                Animated.timing(addIconRotation, {
+                  toValue: addPopupVisible ? 0 : 1,
+                  duration: 180,
+                  easing: Easing.out(Easing.cubic),
+                  useNativeDriver: true
+                }).start();
                 setNavTab("Add");
                 if (addPopupVisible) setAddPopupVisible(false);
                 else { setPopupMounted(true); setAddPopupVisible(true); }
@@ -202,7 +210,7 @@ export default function App() {
               <Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}>
                 <View style={name === "Add" ? { transform: [{ translateX: 1 }, { translateY: -1 }] } : undefined}>
                   <View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center" }}>
-                    <GoogleSymbol name={iconName} size={25} color={active ? C.onPrimary : C.muted} />
+                    {name === "Add" ? <Animated.View style={{ transform: [{ rotate: addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] }) }] }}><GoogleSymbol name={iconName} size={25} color={active ? C.onPrimary : C.muted} /></Animated.View> : <GoogleSymbol name={iconName} size={25} color={active ? C.onPrimary : C.muted} />}
                   </View>
                 </View>
               </Animated.View>
