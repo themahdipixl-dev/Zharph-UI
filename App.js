@@ -49,6 +49,59 @@ export default function App() {
   const [barWidth, setBarWidth] = useState(0);
   const slotWidth = barWidth > 0 ? (barWidth - 18) / tabs.length : 0;
   const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
+  const liquidX = useRef(new Animated.Value(0)).current;
+  const liquidStretch = useRef(new Animated.Value(1)).current;
+  const liquidTapX = useRef(new Animated.Value(1)).current;
+  const liquidTapY = useRef(new Animated.Value(1)).current;
+  const iconScales = useRef(tabs.reduce((acc, [name]) => {
+    acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1);
+    return acc;
+  }, {})).current;
+
+  useEffect(() => {
+    const activeIndex = tabs.findIndex(([name]) => name === navTab);
+    if (activeIndex < 0 || slotWidth <= 0) return;
+    Animated.parallel([
+      Animated.spring(liquidX, {
+        toValue: activeIndex * slotWidth,
+        speed: 14,
+        bounciness: 9,
+        useNativeDriver: true
+      }),
+      Animated.sequence([
+        Animated.timing(liquidStretch, { toValue: 1.42, duration: 120, useNativeDriver: true }),
+        Animated.spring(liquidStretch, { toValue: 1, speed: 12, bounciness: 10, useNativeDriver: true })
+      ])
+    ]).start();
+  }, [navTab, slotWidth, liquidX, liquidStretch]);
+
+  const animateLiquidTap = () => {
+    liquidTapX.stopAnimation();
+    liquidTapY.stopAnimation();
+    liquidTapX.setValue(1);
+    liquidTapY.setValue(1);
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(liquidTapX, { toValue: 1.2, duration: 85, useNativeDriver: true }),
+        Animated.spring(liquidTapX, { toValue: 1, speed: 13, bounciness: 13, useNativeDriver: true })
+      ]),
+      Animated.sequence([
+        Animated.timing(liquidTapY, { toValue: 0.82, duration: 85, useNativeDriver: true }),
+        Animated.spring(liquidTapY, { toValue: 1, speed: 13, bounciness: 13, useNativeDriver: true })
+      ])
+    ]).start();
+  };
+
+  useEffect(() => {
+    tabs.forEach(([name]) => {
+      Animated.spring(iconScales[name], {
+        toValue: navTab === name ? 1.16 : 1,
+        speed: 18,
+        bounciness: 10,
+        useNativeDriver: true
+      }).start();
+    });
+  }, [navTab, iconScales]);
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
@@ -124,10 +177,18 @@ export default function App() {
           </Animated.View>
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
-          <View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft + Math.max(0, tabs.findIndex(([name]) => name === navTab)) * slotWidth }]} />
+          <Animated.View pointerEvents="none" style={[s.liquidIndicator, {
+            left: indicatorLeft,
+            transform: [
+              { translateX: liquidX },
+              { scaleX: Animated.multiply(liquidStretch, liquidTapX) },
+              { scaleY: liquidTapY }
+            ]
+          }]} />
           {tabs.map(([name, iconName]) => {
             const active = navTab === name;
             return <Pressable key={name} onPress={() => {
+              if (name === navTab) animateLiquidTap();
               if (name === "Add") {
                 setNavTab("Add");
                 if (addPopupVisible) setAddPopupVisible(false);
@@ -138,13 +199,13 @@ export default function App() {
                 setNavTab(name);
               }
             }} style={s.tab}>
-              <View style={s.pill}>
+              <Animated.View style={[s.pill, { transform: [{ scale: iconScales[name] }] }]}>
                 <View style={name === "Add" ? { transform: [{ translateX: 1 }, { translateY: -1 }] } : undefined}>
                   <View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center" }}>
                     <GoogleSymbol name={iconName} size={25} color={active ? C.onPrimary : C.muted} />
                   </View>
                 </View>
-              </View>
+              </Animated.View>
             </Pressable>;
           })}
         </View>
