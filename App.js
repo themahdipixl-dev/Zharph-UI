@@ -276,7 +276,7 @@ export default function App() {
         <View pointerEvents="none" style={s.stickyFilterIcon}>
           <GoogleSymbol name="filter_list" size={26} color={C.text} />
         </View>
-      </View>
+      </View>}
       {pageTab === "Home" || pageTab === "Add" ? <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
         {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
         {items.map(([title,uri])=><Pressable key={title} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
