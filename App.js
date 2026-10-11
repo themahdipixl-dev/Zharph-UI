@@ -148,7 +148,6 @@ export default function App() {
             </Pressable>;
           })}
         </View>
-        </View>
       </View>
     </SafeAreaView>
   );
