@@ -82,14 +82,14 @@ export default function App() {
     Animated.parallel([
       Animated.timing(navTranslateY, {
         toValue: shouldHide ? 112 : 0,
-        duration: shouldHide ? 330 : 390,
-        easing: shouldHide ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        duration: 330,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true
       }),
       Animated.timing(navScale, {
         toValue: shouldHide ? 0.86 : 1,
-        duration: shouldHide ? 330 : 390,
-        easing: Easing.out(Easing.cubic),
+        duration: 330,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true
       })
     ]).start();
