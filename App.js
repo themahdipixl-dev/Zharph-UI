@@ -156,18 +156,22 @@ export default function App() {
     });
   }, [addPopupVisible, popupProgress, popupOpacity]);
   const [filter, setFilter] = useState("All");
+  const [gridColumns, setGridColumns] = useState(2);
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
     <ScrollView pointerEvents={pointerEvents} showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
       <View style={s.header}>
         <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
+        {(pageTab === "Home" || pageTab === "Add") && <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
+          <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
+        </Pressable>}
       </View>
       {pageTab === "Home" || pageTab === "Add" ? <>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>
           {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
         </ScrollView>
-        <View style={s.grid}>
-          {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
+        <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
+          {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
           {items.map(([title,uri])=><Pressable key={title} style={s.card} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
         </View>
       </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
@@ -255,10 +259,10 @@ export default function App() {
 }
 const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:C.bg},root:{flex:1,backgroundColor:C.bg},scroll:{paddingHorizontal:20,paddingTop:8,paddingBottom:16},
- header:{flexDirection:"row",alignItems:"center",marginBottom:20},brand:{color:C.text,fontSize:30,fontWeight:"800",letterSpacing:-1.2},
+ header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:20},brand:{color:C.text,fontSize:30,fontWeight:"800",letterSpacing:-1.2},layoutButton:{width:42,height:42,borderRadius:21,alignItems:"center",justifyContent:"center",backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
  filters:{gap:8,paddingBottom:18},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
- grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"flex-start",columnGap:"3.8%",rowGap:14},card:{width:"30.8%",marginBottom:2},photo:{width:"100%",aspectRatio:.64,borderRadius:16,backgroundColor:C.surface2},
+ grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"flex-start",columnGap:"3.8%",rowGap:14},gridTwoColumns:{columnGap:"4%"},card:{width:"30.8%",marginBottom:2},cardTwoColumns:{width:"48%"},photo:{width:"100%",aspectRatio:0.45,borderRadius:16,backgroundColor:C.surface2},
 popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,overflow:"hidden"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"absolute",left:16,right:16,bottom:8,zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
