@@ -179,24 +179,7 @@ export default function App() {
           <View style={{flex:1, overflow:"hidden"}}>
             {renderPage(tab)}
           </View>
-        {popupMounted && <>
-          <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
-            opacity: popupOpacity
-          }]}>
-            <BlurView blurTarget={blurTargetRef} intensity={65} tint="dark" blurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeAddPopup} />
-          </Animated.View>
-          <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
-            opacity: popupOpacity,
-            transform: [
-              { translateY: popupProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) },
-              { scaleX: popupProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) },
-              { scaleY: popupProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.72, 0.94, 1] }) }
-            ]
-          }]}>
-            <Pressable onPress={addPhoto} style={s.addPopupAction}><Text style={s.addPopupText}>Open Gallery</Text></Pressable>
-          </Animated.View>
-        </>}
+
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, {
             left: indicatorLeft,
@@ -236,6 +219,24 @@ export default function App() {
           })}
         </View>
         </BlurTargetView>
+        {popupMounted && <>
+          <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
+            opacity: popupOpacity
+          }]}>
+            <BlurView blurTarget={blurTargetRef} intensity={65} tint="dark" blurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeAddPopup} />
+          </Animated.View>
+          <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
+            opacity: popupOpacity,
+            transform: [
+              { translateY: popupProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) },
+              { scaleX: popupProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) },
+              { scaleY: popupProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.72, 0.94, 1] }) }
+            ]
+          }]}>
+            <Pressable onPress={addPhoto} style={s.addPopupAction}><Text style={s.addPopupText}>Open Gallery</Text></Pressable>
+          </Animated.View>
+        </>}
       </View>
     </SafeAreaView>
   );
