@@ -108,6 +108,17 @@ export default function App() {
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const popupProgress = useRef(new Animated.Value(0)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    addIconRotation.stopAnimation();
+    Animated.timing(addIconRotation, {
+      toValue: addPopupVisible ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true
+    }).start();
+  }, [addPopupVisible, addIconRotation]);
+
   useEffect(() => {
     // Opacity is independent from the elastic spring so its rebound cannot
     // briefly reveal a tiny, faded capsule at the end of closing.
@@ -191,13 +202,6 @@ export default function App() {
             return <Pressable key={name} onPress={() => {
               if (name === navTab) animateLiquidTap();
               if (name === "Add") {
-                addIconRotation.stopAnimation();
-                Animated.timing(addIconRotation, {
-                  toValue: addPopupVisible ? 0 : 1,
-                  duration: 180,
-                  easing: Easing.out(Easing.cubic),
-                  useNativeDriver: true
-                }).start();
                 setNavTab("Add");
                 if (addPopupVisible) setAddPopupVisible(false);
                 else { setPopupMounted(true); setAddPopupVisible(true); }
