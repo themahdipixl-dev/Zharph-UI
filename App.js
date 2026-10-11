@@ -23,6 +23,14 @@ const tabs = [
   ["Add", "add"], ["Saved", "bookmark"], ["Settings", "settings"]
 ];
 
+function findTouch(touches, identifier) {
+  if (!touches) return null;
+  for (let i = 0; i < touches.length; i++) {
+    if ((touches[i].identifier ?? 0) === identifier) return touches[i];
+  }
+  return null;
+}
+
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
   const opticalOffset = name === "home" ? { transform: [{ translateX: 1.2 }, { translateY: -1 }] } : null;
   return <Text accessibilityLabel={name} style={[{ width: size, height: size, fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size, color, textAlign: "center", textAlignVertical: "center", includeFontPadding: false, padding: 0, margin: 0 }, opticalOffset, style]}>{name}</Text>;
@@ -225,55 +233,38 @@ export default function App() {
   const interruptingTouchRef = useRef(null);
   const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
   const handleTouchStart = (event) => {
-    const touches = event.nativeEvent.touches;
-    const touch = touches?.[0];
-    if (!touch) return;
+    const native = event.nativeEvent;
+    const touches = native.touches || [];
+    const changed = native.changedTouches || [];
+    const currentStart = touchStartRef.current;
 
-    // A second finger cancels the in-progress swipe. Keep the original gesture
-    // state until every finger is lifted so touch-end from one finger cannot
-    // leave the page parked between tabs.
-    if (touchStartRef.current) {
-      const previousStart = touchStartRef.current;
-      if (touches.length > 1) {
-        // A second finger while the original is still down is true multitouch.
-        previousStart.multitouch = true;
-        const activeTransition = swipeTransitionRef.current;
-        if (previousStart.claimed && activeTransition && !swipeSettlingRef.current) {
-          finishSwipeTransition(activeTransition.from, activeTransition.direction);
-        }
-        return;
-      }
+    // The first finger owns the gesture until that exact pointer is lifted.
+    // A second finger must not cancel, replace, or settle the first finger's swipe.
+    if (currentStart) {
+      if (findTouch(touches, currentStart.identifier)) return;
 
-      // Some Android touch sequences deliver the new finger's touch-start
-      // before the previous finger's touch-end. Do not mistake that new gesture
-      // for a continuation of the old one.
-      if (previousStart.identifier !== undefined && touch.identifier !== previousStart.identifier) {
-        const previousTransition = swipeTransitionRef.current;
-        if (previousStart.claimed && previousTransition && !swipeSettlingRef.current) {
-          const { dx, vx } = lastSwipeRef.current;
-          const shouldCommit = Math.abs(dx) > Math.max(64, stageSize.width * 0.22) || Math.abs(vx) > 550;
-          finishSwipeTransition(shouldCommit ? previousTransition.to : previousTransition.from, previousTransition.direction);
-        }
-        touchStartRef.current = null;
-      } else {
-        return;
-      }
+      // Defensive recovery for Android sequences where the old pointer's
+      // end event is omitted and the next DOWN arrives after it has disappeared.
+      handleTouchEnd({ nativeEvent: { touches } });
     }
-    if (touches.length > 1) {
-      interruptingTouchRef.current = null;
-      return;
-    }
+
+    const touch = changed.length ? changed[0] : touches[touches.length - 1];
+    if (!touch || findTouch(touches, touch.identifier) == null || stageSize.width <= 0) return;
 
     // Take over the active settle from its exact current position. A quick
     // release is processed after the offset has been captured.
     if (swipeSettlingRef.current || swipeTransitionRef.current) {
       swipeGenerationRef.current += 1;
       swipeSettlingRef.current = false;
+      // Preserve the interrupted animation's destination before clearing it.
+      // If the finger is lifted without dragging, finish that same transition.
+      const resumeTarget = swipeSettleTargetRef.current || swipeTransitionRef.current?.to || null;
       swipeSettleTargetRef.current = null;
       const pendingTouch = {
         x: touch.pageX, y: touch.pageY,
         time: Date.now(), identifier: touch.identifier,
-        lastX: touch.pageX, lastY: touch.pageY, released: false
+        lastX: touch.pageX, lastY: touch.pageY, released: false,
+        resumeTarget
       };
       interruptingTouchRef.current = pendingTouch;
       swipeTopX.stopAnimation(value => {
@@ -312,12 +303,13 @@ export default function App() {
           x: pendingTouch.x, y: pendingTouch.y, time: pendingTouch.time,
           tab: startTab, claimed: !!activeTransition, interrupted: !!activeTransition,
           rebased: !!activeTransition, moved: false, baseOffset: offset,
-          identifier: pendingTouch.identifier, multitouch: false
+          identifier: pendingTouch.identifier, multitouch: false,
+          resumeTarget: pendingTouch.resumeTarget
         };
         lastSwipeRef.current = { dx: offset, vx: 0, time: pendingTouch.time };
         interruptingTouchRef.current = null;
         if (pendingTouch.lastX !== pendingTouch.x || pendingTouch.lastY !== pendingTouch.y) {
-          handleTouchMove({ nativeEvent: { touches: [{ pageX: pendingTouch.lastX, pageY: pendingTouch.lastY }] } });
+          handleTouchMove({ nativeEvent: { touches: [{ pageX: pendingTouch.lastX, pageY: pendingTouch.lastY, identifier: pendingTouch.identifier }] } });
         }
         if (pendingTouch.released) handleTouchEnd({ nativeEvent: { touches: [] } });
       });
@@ -336,23 +328,26 @@ export default function App() {
     lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
   };
   const handleTouchMove = (event) => {
-    const touch = event.nativeEvent.touches?.[0];
+    const native = event.nativeEvent;
+    const start = touchStartRef.current;
+    const touch = start ? findTouch(native.touches, start.identifier) : null;
     if (interruptingTouchRef.current) {
-      // If movement arrives before stopAnimation callbacks, retain the latest
-      // coordinates and process them once the current animated values are frozen.
-      if (touch) {
-        interruptingTouchRef.current.lastX = touch.pageX;
-        interruptingTouchRef.current.lastY = touch.pageY;
+      // Buffer only the controlling finger while the native animation reports
+      // the exact position where it was frozen.
+      const pending = interruptingTouchRef.current;
+      const pendingTouch = findTouch(native.touches, pending.identifier);
+      if (pendingTouch) {
+        pending.lastX = pendingTouch.pageX;
+        pending.lastY = pendingTouch.pageY;
       }
       return;
     }
-    const start = touchStartRef.current;
-    if (!start || start.multitouch || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
+    if (!start || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
     const fingerDx = touch.pageX - start.x;
     const dy = touch.pageY - start.y;
     const dx = start.interrupted ? start.baseOffset + fingerDx : fingerDx;
     if (start.interrupted) {
-      if (Math.abs(fingerDx) < 1 && Math.abs(dy) < 1) return;
+      if (Math.abs(fingerDx) < 2 && Math.abs(dy) < 2) return;
       start.moved = true;
       const transition = swipeTransitionRef.current;
       if (!transition) return;
@@ -410,22 +405,32 @@ export default function App() {
     const elapsed = Math.max(1, now - lastSwipeRef.current.time);
     lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
   };
-  const handleTouchEnd = (event) => {
-    if (interruptingTouchRef.current) {
-      if ((event?.nativeEvent?.touches?.length ?? 0) === 0) interruptingTouchRef.current.released = true;
+  const handleTouchEnd = (event, cancelled = false) => {
+    const touches = event?.nativeEvent?.touches || [];
+    const start = touchStartRef.current;
+    const pending = interruptingTouchRef.current;
+
+    if (pending) {
+      if (cancelled || !findTouch(touches, pending.identifier)) pending.released = true;
       return;
     }
-    // React Native sends touch-end when any finger lifts, not only when the
-    // whole gesture ends. Wait until no fingers remain on the screen.
-    if ((event?.nativeEvent?.touches?.length ?? 0) > 0) return;
-    const start = touchStartRef.current;
+    if (!start) return;
+
+    // Only the original controlling pointer can end the gesture. Secondary
+    // fingers are ignored, whether they move or lift first.
+    if (!cancelled && findTouch(touches, start.identifier)) return;
+
     touchStartRef.current = null;
     const transition = swipeTransitionRef.current;
-    if (start?.multitouch) {
-      if (transition && !swipeSettlingRef.current) finishSwipeTransition(transition.from, transition.direction);
+    if (start.interrupted && !start.moved && transition && !swipeSettlingRef.current) {
+      const resumeTarget = start.resumeTarget;
+      const destination = resumeTarget === transition.from || resumeTarget === transition.to
+        ? resumeTarget
+        : transition.to;
+      finishSwipeTransition(destination, transition.direction);
       return;
     }
-    if (!start?.claimed || !transition || swipeSettlingRef.current) return;
+    if (!start.claimed || !transition || swipeSettlingRef.current) return;
     const { dx, vx } = lastSwipeRef.current;
     let destination;
     if (start.rebased) {
@@ -472,7 +477,11 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
-        <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
+        <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={event => {
+          const start = touchStartRef.current;
+          if (start) lastSwipeRef.current = { ...lastSwipeRef.current, vx: 0 };
+          handleTouchEnd(event, true);
+        }}>
           <View pointerEvents={swipeTransition ? "none" : "auto"} style={{flex:1, opacity: swipeTransition ? 0 : 1}}>
             {renderPage(tab)}
           </View>
