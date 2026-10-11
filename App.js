@@ -222,7 +222,7 @@ export default function App() {
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
           }]}>
-            <BlurView blurTarget={blurTargetRef} intensity={65} tint="default" blurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
+            <BlurView blurTarget={blurTargetRef} intensity={65} blurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
             <Pressable style={StyleSheet.absoluteFill} onPress={closeAddPopup} />
           </Animated.View>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
