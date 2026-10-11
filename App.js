@@ -274,7 +274,7 @@ export default function App() {
           {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
         </ScrollView>
         <View pointerEvents="none" style={s.stickyFilterIcon}>
-          <GoogleSymbol name="filter_list" size={26} color={C.text} />
+          <GoogleSymbol name="filter_alt" size={26} color={C.text} />
         </View>
       </View>}
       {pageTab === "Home" || pageTab === "Add" ? <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
