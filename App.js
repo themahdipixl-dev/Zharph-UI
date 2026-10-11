@@ -52,7 +52,6 @@ export default function App() {
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const popupProgress = useRef(new Animated.Value(0)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
