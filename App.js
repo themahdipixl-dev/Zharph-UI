@@ -271,7 +271,7 @@ export default function App() {
       </View>
       {pageTab === "Home" || pageTab === "Add" ? <>
         <View style={s.stickyFilters}>
-          <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
             {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
           </ScrollView>
           <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ position: "absolute", right: 20, top: 2, opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }], zIndex: 3 }}>
