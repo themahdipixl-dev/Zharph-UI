@@ -71,6 +71,7 @@ export default function App() {
   const layoutStickyY = useRef(new Animated.Value(-48)).current;
   const layoutStickyWidth = useRef(new Animated.Value(0)).current;
   const layoutInStickyBar = useRef(false);
+  const [stickyLayoutActive, setStickyLayoutActive] = useState(false);
   const handlePageScroll = (event) => {
     const y = Math.max(0, event.nativeEvent.contentOffset.y);
     const delta = y - lastScrollY.current;
@@ -79,6 +80,7 @@ export default function App() {
     const shouldShowStickyLayout = y > 64;
     if (shouldShowStickyLayout !== layoutInStickyBar.current) {
       layoutInStickyBar.current = shouldShowStickyLayout;
+      setStickyLayoutActive(shouldShowStickyLayout);
       layoutHeaderOpacity.stopAnimation();
       layoutStickyOpacity.stopAnimation();
       layoutStickyY.stopAnimation();
@@ -272,7 +274,7 @@ export default function App() {
   const [gridColumns, setGridColumns] = useState(2);
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
-    <ScrollView pointerEvents={pointerEvents} showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={handlePageScroll} stickyHeaderIndices={(pageTab === "Home" || pageTab === "Add") ? [1] : []} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
+    <ScrollView pointerEvents={pointerEvents} nestedScrollEnabled showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={handlePageScroll} stickyHeaderIndices={(pageTab === "Home" || pageTab === "Add") ? [1] : []} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
       <View style={s.header}>
         <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
         {(pageTab === "Home" || pageTab === "Add") && <Animated.View style={{ opacity: layoutHeaderOpacity }}>
@@ -283,10 +285,10 @@ export default function App() {
       </View>
       {pageTab === "Home" || pageTab === "Add" ? <>
         <View style={s.stickyFilters}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
+          <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
             {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
           </ScrollView>
-          <Animated.View pointerEvents={layoutInStickyBar.current ? "auto" : "none"} style={{ width: layoutStickyWidth, overflow: "hidden", alignItems: "flex-end" }}>
+          <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ width: layoutStickyWidth, overflow: "hidden", alignItems: "flex-end" }}>
             <Animated.View style={{ opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }] }}>
               <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
                 <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
