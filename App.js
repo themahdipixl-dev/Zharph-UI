@@ -62,6 +62,38 @@ export default function App() {
   const [tab, setTab] = useState("Home");
   const [navTab, setNavTab] = useState("Home");
   const [barWidth, setBarWidth] = useState(0);
+  const navTranslateY = useRef(new Animated.Value(0)).current;
+  const navScale = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const navHidden = useRef(false);
+  const handlePageScroll = (event) => {
+    const y = Math.max(0, event.nativeEvent.contentOffset.y);
+    const delta = y - lastScrollY.current;
+    lastScrollY.current = y;
+
+    let shouldHide = navHidden.current;
+    if (y > 12 && delta > 3) shouldHide = true;
+    else if (delta < -3 || y <= 2) shouldHide = false;
+    if (shouldHide === navHidden.current) return;
+
+    navHidden.current = shouldHide;
+    navTranslateY.stopAnimation();
+    navScale.stopAnimation();
+    Animated.parallel([
+      Animated.timing(navTranslateY, {
+        toValue: shouldHide ? 112 : 0,
+        duration: shouldHide ? 330 : 390,
+        easing: shouldHide ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }),
+      Animated.timing(navScale, {
+        toValue: shouldHide ? 0.86 : 1,
+        duration: shouldHide ? 330 : 390,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      })
+    ]).start();
+  };
   const slotWidth = barWidth > 0 ? (barWidth - 18) / tabs.length : 0;
   const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
   const liquidX = useRef(new Animated.Value(0)).current;
@@ -159,7 +191,7 @@ export default function App() {
   const [gridColumns, setGridColumns] = useState(2);
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
-    <ScrollView pointerEvents={pointerEvents} showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
+    <ScrollView pointerEvents={pointerEvents} showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={handlePageScroll} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
       <View style={s.header}>
         <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
         {(pageTab === "Home" || pageTab === "Add") && <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
@@ -197,7 +229,7 @@ export default function App() {
             {renderPage(tab)}
           </View>
         </View>
-        <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
+        <Animated.View style={[s.bar, { transform: [{ translateY: navTranslateY }, { scale: navScale }] }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, {
             left: indicatorLeft,
             transform: [
@@ -234,7 +266,7 @@ export default function App() {
               </Animated.View>
             </Pressable>;
           })}
-        </View>
+        </Animated.View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
