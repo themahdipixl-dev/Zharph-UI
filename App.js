@@ -17,7 +17,21 @@ const items = [
   ["Blue hour", "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=700&auto=format&fit=crop&q=85"],
   ["Desert lines", "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=700&auto=format&fit=crop&q=85"],
   ["Forest light", "https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&auto=format&fit=crop&q=85"],
-  ["Soft horizon", "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=700&auto=format&fit=crop&q=85"]
+  ["Soft horizon", "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=700&auto=format&fit=crop&q=85"],
+  ["Misty peaks", "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=700&auto=format&fit=crop&q=85&sat=-20"],
+  ["Emerald lake", "https://images.unsplash.com/photo-1439853949127-fa647821eba0?w=700&auto=format&fit=crop&q=85"],
+  ["Golden fields", "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=700&auto=format&fit=crop&q=85"],
+  ["Ocean cliffs", "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=700&auto=format&fit=crop&q=85"],
+  ["Autumn path", "https://images.unsplash.com/photo-1507783548227-7b1b4fa075e0?w=700&auto=format&fit=crop&q=85"],
+  ["Snow valley", "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=700&auto=format&fit=crop&q=85"],
+  ["Tropical bay", "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=700&auto=format&fit=crop&q=85"],
+  ["Moonlit lake", "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=700&auto=format&fit=crop&q=85&sat=-35"],
+  ["Pine wilderness", "https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&auto=format&fit=crop&q=85&sat=-15"],
+  ["Canyon glow", "https://images.unsplash.com/photo-1464013778555-8e723c2f01f8?w=700&auto=format&fit=crop&q=85"],
+  ["Rainforest", "https://images.unsplash.com/photo-1511497584788-876760111969?w=700&auto=format&fit=crop&q=85"],
+  ["Calm lagoon", "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=700&auto=format&fit=crop&q=85"],
+  ["Cloud summit", "https://images.unsplash.com/photo-1464278533981-50106e6176b1?w=700&auto=format&fit=crop&q=85"],
+  ["River bend", "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=700&auto=format&fit=crop&q=85"]
 ];
 const tabs = [
   ["Home", "home"], ["Depth", "layers"],
