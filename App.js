@@ -68,7 +68,7 @@ export default function App() {
   const navHidden = useRef(false);
   const layoutHeaderOpacity = useRef(new Animated.Value(1)).current;
   const layoutStickyOpacity = useRef(new Animated.Value(0)).current;
-  const layoutStickyX = useRef(new Animated.Value(36)).current;
+  const layoutStickyY = useRef(new Animated.Value(-48)).current;
   const layoutInStickyBar = useRef(false);
   const handlePageScroll = (event) => {
     const y = Math.max(0, event.nativeEvent.contentOffset.y);
@@ -80,7 +80,7 @@ export default function App() {
       layoutInStickyBar.current = shouldShowStickyLayout;
       layoutHeaderOpacity.stopAnimation();
       layoutStickyOpacity.stopAnimation();
-      layoutStickyX.stopAnimation();
+      layoutStickyY.stopAnimation();
       Animated.timing(layoutHeaderOpacity, {
         toValue: shouldShowStickyLayout ? 0 : 1,
         duration: 180,
@@ -88,7 +88,7 @@ export default function App() {
         useNativeDriver: true
       }).start();
       if (shouldShowStickyLayout) {
-        layoutStickyX.setValue(36);
+        layoutStickyY.setValue(-48);
         Animated.parallel([
           Animated.timing(layoutStickyOpacity, {
             toValue: 1,
@@ -96,7 +96,7 @@ export default function App() {
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true
           }),
-          Animated.spring(layoutStickyX, {
+          Animated.spring(layoutStickyY, {
             toValue: 0,
             speed: 16,
             bounciness: 5,
@@ -111,8 +111,8 @@ export default function App() {
             easing: Easing.in(Easing.cubic),
             useNativeDriver: true
           }),
-          Animated.timing(layoutStickyX, {
-            toValue: 36,
+          Animated.timing(layoutStickyY, {
+            toValue: -48,
             duration: 180,
             easing: Easing.in(Easing.cubic),
             useNativeDriver: true
@@ -272,10 +272,12 @@ export default function App() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
             {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
           </ScrollView>
-          <Animated.View style={{ opacity: layoutStickyOpacity, transform: [{ translateX: layoutStickyX }] }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
-              <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
-            </Pressable>
+          <Animated.View pointerEvents={layoutInStickyBar.current ? "auto" : "none"} style={s.stickyLayoutButton}>
+            <Animated.View style={{ opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }] }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
+                <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
+              </Pressable>
+            </Animated.View>
           </Animated.View>
         </View>
         <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
@@ -369,7 +371,7 @@ const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:C.bg},root:{flex:1,backgroundColor:C.bg},scroll:{paddingHorizontal:20,paddingTop:8,paddingBottom:16},
  header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:20},brand:{color:C.text,fontSize:30,fontWeight:"800",letterSpacing:-1.2},layoutButton:{width:42,height:42,borderRadius:21,alignItems:"center",justifyContent:"center",backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},
  title:{color:C.text,fontSize:21,fontWeight:"700",letterSpacing:-.4},
- stickyFilters:{flexDirection:"row",alignItems:"center",backgroundColor:C.bg,paddingTop:2,paddingBottom:8,marginHorizontal:-20,paddingHorizontal:20,gap:8,zIndex:2,elevation:2},filterScroller:{flex:1,minWidth:0},filters:{gap:8,paddingBottom:8},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
+ stickyFilters:{flexDirection:"row",alignItems:"center",backgroundColor:C.bg,paddingTop:2,paddingBottom:8,marginHorizontal:-20,paddingHorizontal:20,paddingRight:70,zIndex:2,elevation:2},stickyLayoutButton:{position:"absolute",right:20,top:2,zIndex:3},filterScroller:{flex:1,minWidth:0},filters:{gap:8,paddingBottom:8},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"flex-start",columnGap:"3.8%",rowGap:14},gridTwoColumns:{columnGap:0,justifyContent:"space-between"},card:{width:"30.8%",marginBottom:2},cardTwoColumns:{width:"48%"},photo:{width:"100%",aspectRatio:0.5,borderRadius:16,backgroundColor:C.surface2},
 popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,overflow:"hidden"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"absolute",left:16,right:16,bottom:8,zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
