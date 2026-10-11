@@ -273,11 +273,6 @@ export default function App() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
           {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
         </ScrollView>
-        <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ position: "absolute", right: 20, top: 2, opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }], zIndex: 3 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
-            <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={26} color={C.text} />
-          </Pressable>
-        </Animated.View>
       </View>}
       {pageTab === "Home" || pageTab === "Add" ? <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
         {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
