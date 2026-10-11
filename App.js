@@ -69,7 +69,6 @@ export default function App() {
   const layoutHeaderOpacity = useRef(new Animated.Value(1)).current;
   const layoutStickyOpacity = useRef(new Animated.Value(0)).current;
   const layoutStickyY = useRef(new Animated.Value(-48)).current;
-  const layoutStickyWidth = useRef(new Animated.Value(0)).current;
   const layoutInStickyBar = useRef(false);
   const [stickyLayoutActive, setStickyLayoutActive] = useState(false);
   const handlePageScroll = (event) => {
@@ -84,7 +83,6 @@ export default function App() {
       layoutHeaderOpacity.stopAnimation();
       layoutStickyOpacity.stopAnimation();
       layoutStickyY.stopAnimation();
-      layoutStickyWidth.stopAnimation();
       Animated.timing(layoutHeaderOpacity, {
         toValue: shouldShowStickyLayout ? 0 : 1,
         duration: 180,
@@ -94,12 +92,6 @@ export default function App() {
       if (shouldShowStickyLayout) {
         layoutStickyY.setValue(-48);
         Animated.parallel([
-          Animated.timing(layoutStickyWidth, {
-            toValue: 50,
-            duration: 260,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: false
-          }),
           Animated.timing(layoutStickyOpacity, {
             toValue: 1,
             duration: 260,
@@ -115,12 +107,6 @@ export default function App() {
         ]).start();
       } else {
         Animated.parallel([
-          Animated.timing(layoutStickyWidth, {
-            toValue: 0,
-            duration: 180,
-            easing: Easing.in(Easing.cubic),
-            useNativeDriver: false
-          }),
           Animated.timing(layoutStickyOpacity, {
             toValue: 0,
             duration: 150,
@@ -288,12 +274,10 @@ export default function App() {
           <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
             {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
           </ScrollView>
-          <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ width: layoutStickyWidth, overflow: "hidden", alignItems: "flex-end" }}>
-            <Animated.View style={{ opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }] }}>
-              <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
-                <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
-              </Pressable>
-            </Animated.View>
+          <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ position: "absolute", right: 20, top: 2, opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }], zIndex: 3 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
+              <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
+            </Pressable>
           </Animated.View>
         </View>
         <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
