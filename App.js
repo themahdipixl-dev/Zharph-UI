@@ -79,20 +79,35 @@ export default function App() {
     navHidden.current = shouldHide;
     navTranslateY.stopAnimation();
     navScale.stopAnimation();
-    Animated.parallel([
+    const hideAnimation = Animated.sequence([
+      Animated.timing(navScale, {
+        toValue: 0.86,
+        duration: 110,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }),
       Animated.timing(navTranslateY, {
-        toValue: shouldHide ? 112 : 0,
-        duration: shouldHide ? 330 : 390,
-        easing: shouldHide ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        toValue: 112,
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true
+      })
+    ]);
+    const showAnimation = Animated.sequence([
+      Animated.timing(navTranslateY, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true
       }),
       Animated.timing(navScale, {
-        toValue: shouldHide ? 0.86 : 1,
-        duration: shouldHide ? 330 : 390,
+        toValue: 1,
+        duration: 110,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true
       })
-    ]).start();
+    ]);
+    (shouldHide ? hideAnimation : showAnimation).start();
   };
   const slotWidth = barWidth > 0 ? (barWidth - 18) / tabs.length : 0;
   const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
