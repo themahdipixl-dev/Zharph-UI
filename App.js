@@ -104,6 +104,7 @@ export default function App() {
     });
   }, [navTab, iconScales]);
   const [addPopupVisible, setAddPopupVisible] = useState(false);
+  const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const popupProgress = useRef(new Animated.Value(0)).current;
@@ -157,8 +158,12 @@ export default function App() {
       </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
     </ScrollView>
   );
-  const addPhoto = async () => {
+  const closeAddPopup = () => {
     setAddPopupVisible(false);
+    setNavTab(previousNavTab);
+  };
+  const addPhoto = async () => {
+    closeAddPopup();
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
     if (!result.canceled && result.assets?.[0]?.uri) setUserImages(prev => [result.assets[0].uri, ...prev]);
   };
@@ -175,7 +180,7 @@ export default function App() {
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
           }]}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddPopupVisible(false)} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeAddPopup} />
           </Animated.View>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
             opacity: popupOpacity,
@@ -202,9 +207,14 @@ export default function App() {
             return <Pressable key={name} onPress={() => {
               if (name === navTab) animateLiquidTap();
               if (name === "Add") {
-                setNavTab("Add");
-                if (addPopupVisible) setAddPopupVisible(false);
-                else { setPopupMounted(true); setAddPopupVisible(true); }
+                if (addPopupVisible) {
+                  closeAddPopup();
+                } else {
+                  setPreviousNavTab(navTab);
+                  setNavTab("Add");
+                  setPopupMounted(true);
+                  setAddPopupVisible(true);
+                }
               } else {
                 setAddPopupVisible(false);
                 setTab(name);
