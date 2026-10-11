@@ -265,7 +265,7 @@ export default function App() {
         <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
         {(pageTab === "Home" || pageTab === "Add") && <Animated.View style={{ opacity: layoutHeaderOpacity }}>
           <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
-            <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
+            <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={26} color={C.text} />
           </Pressable>
         </Animated.View>}
       </View>
@@ -275,7 +275,7 @@ export default function App() {
         </ScrollView>
         <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ position: "absolute", right: 20, top: 2, opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }], zIndex: 3 }}>
           <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
-            <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
+            <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={26} color={C.text} />
           </Pressable>
         </Animated.View>
       </View>}
