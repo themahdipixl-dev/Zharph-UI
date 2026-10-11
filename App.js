@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing } from "react-native";
-import { BlurView } from "expo-blur";
+import { BlurView, BlurTargetView } from "expo-blur";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -110,6 +110,7 @@ export default function App() {
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const popupProgress = useRef(new Animated.Value(0)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
+  const blurTargetRef = useRef(null);
 
   useEffect(() => {
     addIconRotation.stopAnimation();
@@ -174,14 +175,15 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
-        <View style={{flex:1, overflow:"hidden"}}>
-          {renderPage(tab)}
-        </View>
+        <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
+          <View style={{flex:1, overflow:"hidden"}}>
+            {renderPage(tab)}
+          </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
           }]}>
-            <BlurView intensity={45} tint="dark" experimentalBlurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
+            <BlurView blurTarget={blurTargetRef} intensity={65} tint="dark" blurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
             <Pressable style={StyleSheet.absoluteFill} onPress={closeAddPopup} />
           </Animated.View>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.addPopup, {
@@ -233,6 +235,7 @@ export default function App() {
             </Pressable>;
           })}
         </View>
+        </BlurTargetView>
       </View>
     </SafeAreaView>
   );
