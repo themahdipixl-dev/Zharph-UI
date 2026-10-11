@@ -269,22 +269,20 @@ export default function App() {
           </Pressable>
         </Animated.View>}
       </View>
-      {pageTab === "Home" || pageTab === "Add" ? <>
-        <View style={s.stickyFilters}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
-            {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
-          </ScrollView>
-          <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ position: "absolute", right: 20, top: 2, opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }], zIndex: 3 }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
-              <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
-            </Pressable>
-          </Animated.View>
-        </View>
-        <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
-          {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
-          {items.map(([title,uri])=><Pressable key={title} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
-        </View>
-      </> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
+      {(pageTab === "Home" || pageTab === "Add") && <View style={s.stickyFilters}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
+          {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
+        </ScrollView>
+        <Animated.View pointerEvents={stickyLayoutActive ? "auto" : "none"} style={{ position: "absolute", right: 20, top: 2, opacity: layoutStickyOpacity, transform: [{ translateY: layoutStickyY }], zIndex: 3 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={gridColumns === 2 ? "Switch to three-column grid" : "Switch to two-column grid"} onPress={() => setGridColumns(columns => columns === 2 ? 3 : 2)} style={s.layoutButton}>
+            <GoogleSymbol name={gridColumns === 2 ? "grid_view" : "view_module"} size={23} color={C.text} />
+          </Pressable>
+        </Animated.View>
+      </View>}
+      {pageTab === "Home" || pageTab === "Add" ? <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
+        {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
+        {items.map(([title,uri])=><Pressable key={title} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
+      </View> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
     </ScrollView>
   );
   const closeAddPopup = () => {
