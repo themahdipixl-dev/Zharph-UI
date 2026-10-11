@@ -49,100 +49,12 @@ export default function App() {
   const [barWidth, setBarWidth] = useState(0);
   const slotWidth = barWidth > 0 ? (barWidth - 18) / tabs.length : 0;
   const indicatorLeft = 9 + Math.max(0, (slotWidth - 54) / 2);
-  const liquidX = useRef(new Animated.Value(0)).current;
-  const liquidStretch = useRef(new Animated.Value(1)).current;
-  const liquidTapX = useRef(new Animated.Value(1)).current;
-  const liquidTapY = useRef(new Animated.Value(1)).current;
-  const skipNextNavAnimationRef = useRef(false);
-  const iconScales = useRef(tabs.reduce((acc, [name]) => { acc[name] = new Animated.Value(name === "Home" ? 1.12 : 1); return acc; }, {})).current;
-  const addIconRotation = useRef(new Animated.Value(0)).current;
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   const [popupMounted, setPopupMounted] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-  const [swipeTransition, setSwipeTransition] = useState(null);
-  // Shared progress for finger-swipe page movement and indicator.
-  // Tap-only liquid effects stay independent.
-  const swipeTopX = useRef(new Animated.Value(0)).current;
-  const swipeTransitionRef = useRef(null);
-  const swipeGenerationRef = useRef(0);
-  const swipeStartTabRef = useRef(navTab);
-  const swipeSettlingRef = useRef(false);
-  const swipeSettleTargetRef = useRef(null);
-  const swipeSettleCommitRef = useRef(false);
-  // The swipe indicator is derived from the same page offset.
-  const swipeFromIndex = swipeTransition ? Math.max(0, tabs.findIndex(([name]) => name === swipeTransition.from)) : 0;
-  const swipeIndicatorX = swipeTransition && stageSize.width > 0
-    ? swipeTopX.interpolate({
-        inputRange: [-stageSize.width, 0, stageSize.width],
-        outputRange: [Math.min(tabs.length - 1, swipeFromIndex + 1) * slotWidth, swipeFromIndex * slotWidth, Math.max(0, swipeFromIndex - 1) * slotWidth],
-        extrapolate: "clamp"
-      })
-    : liquidX;
-  const swipeIndicatorStretch = swipeTransition && stageSize.width > 0
-    ? swipeTopX.interpolate({ inputRange: [-stageSize.width, 0, stageSize.width], outputRange: [1.42, 1, 1.42], extrapolate: "clamp" })
-    : liquidStretch;
-  const navTabRef = useRef(navTab);
-  const addPopupVisibleRef = useRef(addPopupVisible);
-  navTabRef.current = navTab;
-  addPopupVisibleRef.current = addPopupVisible;
-  const navigateToTabRef = useRef(null);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const popupProgress = useRef(new Animated.Value(0)).current;
   const popupOpacity = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const activeIndex = tabs.findIndex(([name]) => name === navTab);
-    if (activeIndex < 0) return;
-    if (skipNextNavAnimationRef.current) {
-      skipNextNavAnimationRef.current = false;
-      return;
-    }
-    const slot = activeIndex;
-    Animated.parallel([
-      Animated.spring(liquidX, {
-        toValue: slot * slotWidth,
-        speed: 14,
-        bounciness: 9,
-        useNativeDriver: true
-      }),
-      Animated.sequence([
-        Animated.timing(liquidStretch, { toValue: 1.42, duration: 120, useNativeDriver: true }),
-        Animated.spring(liquidStretch, { toValue: 1, speed: 12, bounciness: 10, useNativeDriver: true })
-      ])
-    ]).start();
-  }, [navTab, slotWidth, liquidX, liquidStretch]);
-  const animateLiquidTap = () => {
-    liquidTapX.stopAnimation();
-    liquidTapY.stopAnimation();
-    liquidTapX.setValue(1);
-    liquidTapY.setValue(1);
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(liquidTapX, { toValue: 1.2, duration: 85, useNativeDriver: true }),
-        Animated.spring(liquidTapX, { toValue: 1, speed: 13, bounciness: 13, useNativeDriver: true })
-      ]),
-      Animated.sequence([
-        Animated.timing(liquidTapY, { toValue: 0.82, duration: 85, useNativeDriver: true }),
-        Animated.spring(liquidTapY, { toValue: 1, speed: 13, bounciness: 13, useNativeDriver: true })
-      ])
-    ]).start();
-  };
-  useEffect(() => {
-    tabs.forEach(([name]) => {
-      Animated.spring(iconScales[name], {
-        toValue: navTab === name ? 1.16 : 1,
-        speed: 18,
-        bounciness: 10,
-        useNativeDriver: true
-      }).start();
-    });
-  }, [navTab, iconScales]);
-  useEffect(() => {
-    addIconRotation.stopAnimation();
-    Animated.timing(addIconRotation, {
-      toValue: addPopupVisible ? 1 : 0,
-      duration: 260,
-      useNativeDriver: true
-    }).start();
-  }, [addPopupVisible, addIconRotation]);
   useEffect(() => {
     // Opacity is independent from the elastic spring so its rebound cannot
     // briefly reveal a tiny, faded capsule at the end of closing.
@@ -163,291 +75,6 @@ export default function App() {
       if (finished && !addPopupVisible) setPopupMounted(false);
     });
   }, [addPopupVisible, popupProgress, popupOpacity]);
-  const finishSwipeTransition = (destinationName, direction) => {
-    if (swipeSettlingRef.current) return;
-    const activeTransition = swipeTransitionRef.current;
-    if (!activeTransition) return;
-    const destination = destinationName || activeTransition.from;
-    const commit = destination !== activeTransition.from;
-    swipeSettlingRef.current = true;
-    const settleGeneration = swipeGenerationRef.current;
-    swipeSettleCommitRef.current = commit;
-    swipeSettleTargetRef.current = destination;
-    // The outgoing page settles at 0; the incoming page settles at direction * width.
-    // This remains valid if the two page roles were swapped during a takeover.
-    const distance = commit ? direction * stageSize.width : 0;
-    const currentOffset = lastSwipeRef.current.dx;
-    const remaining = Math.abs(distance - currentOffset);
-    const releaseVelocity = lastSwipeRef.current.vx || 0;
-    // Telegram-style settling: use its standard ease curve and let the release
-    // velocity influence duration, rather than using one distance-only timing.
-    const velocityTowardTarget = releaseVelocity * Math.sign(distance - currentOffset);
-    const baseDuration = 180 + (remaining / Math.max(1, stageSize.width)) * 100;
-    const velocityFactor = velocityTowardTarget > 0
-      ? Math.max(0.62, 1 - Math.min(velocityTowardTarget, 1800) / 3600)
-      : 1 + Math.min(Math.abs(velocityTowardTarget), 1200) / 6000;
-    const settleDuration = Math.max(120, Math.min(300, baseDuration * velocityFactor));
-    // Telegram's CubicBezierInterpolator.DEFAULT: cubic-bezier(.25, .1, .25, 1).
-    const settleEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
-    const startIndex = Math.max(0, tabs.findIndex(([name]) => name === activeTransition.from));
-    const targetIndex = Math.max(0, tabs.findIndex(([name]) => name === destination));
-    // One animation controls both the page and its derived indicator.
-    Animated.timing(swipeTopX, {
-      toValue: distance,
-      duration: settleDuration,
-      easing: settleEasing,
-      useNativeDriver: true
-    }).start(({ finished }) => {
-      // A rapid new gesture can begin as this animation completes. Ignore any
-      // stale completion before it commits a tab or clears a newer transition.
-      if (!finished || swipeGenerationRef.current !== settleGeneration) return;
-      if (commit) {
-        // The indicator already followed the finger; don't replay the tab-click animation.
-        skipNextNavAnimationRef.current = true;
-        setNavTab(destination);
-        navTabRef.current = destination;
-        if (destination === "Add") {
-          setPopupMounted(true);
-          setAddPopupVisible(true);
-        } else {
-          setAddPopupVisible(false);
-          setTab(destination);
-        }
-      }
-      // Remove the transition layers before resetting their animated offsets.
-      // Resetting first can briefly put the outgoing (old) page back at x=0,
-      // causing it to flash over the newly selected page on some renders.
-      liquidX.setValue(targetIndex * slotWidth);
-      liquidStretch.setValue(1);
-      swipeTransitionRef.current = null;
-      setSwipeTransition(null);
-      requestAnimationFrame(() => {
-        if (swipeGenerationRef.current !== settleGeneration || swipeTransitionRef.current) return;
-        swipeTopX.setValue(0);
-        swipeSettleTargetRef.current = null;
-        swipeSettlingRef.current = false;
-      });
-    });
-  };
-  const touchStartRef = useRef(null);
-  const interruptingTouchRef = useRef(null);
-  const lastSwipeRef = useRef({ dx: 0, vx: 0, time: 0 });
-  const handleTouchStart = (event) => {
-    const native = event.nativeEvent;
-    const touches = native.touches || [];
-    const changed = native.changedTouches || [];
-    const currentStart = touchStartRef.current;
-
-    // The first finger owns the gesture until that exact pointer is lifted.
-    // A second finger must not cancel, replace, or settle the first finger's swipe.
-    if (currentStart) {
-      if (findTouch(touches, currentStart.identifier)) return;
-
-      // Defensive recovery for Android sequences where the old pointer's
-      // end event is omitted and the next DOWN arrives after it has disappeared.
-      handleTouchEnd({ nativeEvent: { touches } });
-    }
-
-    const touch = changed.length ? changed[0] : touches[touches.length - 1];
-    if (!touch || findTouch(touches, touch.identifier) == null || stageSize.width <= 0) return;
-
-    // Take over the active settle from its exact current position. A quick
-    // release is processed after the offset has been captured.
-    if (swipeSettlingRef.current || swipeTransitionRef.current) {
-      swipeGenerationRef.current += 1;
-      swipeSettlingRef.current = false;
-      // Preserve the interrupted animation's destination before clearing it.
-      // If the finger is lifted without dragging, finish that same transition.
-      const resumeTarget = swipeSettleTargetRef.current || swipeTransitionRef.current?.to || null;
-      swipeSettleTargetRef.current = null;
-      const pendingTouch = {
-        x: touch.pageX, y: touch.pageY,
-        time: Date.now(), identifier: touch.identifier,
-        lastX: touch.pageX, lastY: touch.pageY, released: false,
-        resumeTarget
-      };
-      interruptingTouchRef.current = pendingTouch;
-      swipeTopX.stopAnimation(value => {
-        if (interruptingTouchRef.current !== pendingTouch) return;
-        let offset = typeof value === "number" ? value : 0;
-        let activeTransition = swipeTransitionRef.current;
-
-        // Telegram promotes the page under the new finger to the tracked page.
-        // Rebase the offset so both pages remain at their exact rendered positions.
-        if (activeTransition && stageSize.width > 0) {
-          const width = stageSize.width;
-          const incomingX = offset + (activeTransition.direction < 0 ? width : -width);
-          const visibleLeft = Math.max(0, incomingX);
-          const visibleRight = Math.min(width, incomingX + width);
-          // pageX is in screen coordinates; the stage starts at the screen's left edge.
-          const touchX = pendingTouch.x;
-          const touchesIncoming = visibleRight > visibleLeft && touchX >= visibleLeft && touchX <= visibleRight;
-          if (touchesIncoming) {
-            const previousFrom = activeTransition.from;
-            activeTransition = {
-              from: activeTransition.to,
-              to: previousFrom,
-              direction: -activeTransition.direction
-            };
-            offset = incomingX;
-            swipeTransitionRef.current = activeTransition;
-            swipeStartTabRef.current = activeTransition.from;
-            setSwipeTransition(activeTransition);
-          }
-        }
-
-        swipeTopX.setValue(offset);
-        const startTab = activeTransition?.from || navTabRef.current;
-        if (activeTransition) swipeStartTabRef.current = activeTransition.from;
-        touchStartRef.current = {
-          x: pendingTouch.x, y: pendingTouch.y, time: pendingTouch.time,
-          tab: startTab, claimed: !!activeTransition, interrupted: !!activeTransition,
-          rebased: !!activeTransition, moved: false, baseOffset: offset,
-          identifier: pendingTouch.identifier, multitouch: false,
-          resumeTarget: pendingTouch.resumeTarget
-        };
-        lastSwipeRef.current = { dx: offset, vx: 0, time: pendingTouch.time };
-        interruptingTouchRef.current = null;
-        if (pendingTouch.lastX !== pendingTouch.x || pendingTouch.lastY !== pendingTouch.y) {
-          handleTouchMove({ nativeEvent: { touches: [{ pageX: pendingTouch.lastX, pageY: pendingTouch.lastY, identifier: pendingTouch.identifier }] } });
-        }
-        if (pendingTouch.released) handleTouchEnd({ nativeEvent: { touches: [] } });
-      });
-      return;
-    }
-
-    swipeGenerationRef.current += 1;
-    liquidX.stopAnimation();
-    liquidStretch.stopAnimation();
-    const activeIndex = tabs.findIndex(([name]) => name === navTabRef.current);
-    if (activeIndex >= 0 && slotWidth > 0) liquidX.setValue(activeIndex * slotWidth);
-    liquidStretch.setValue(1);
-
-    const startTab = navTabRef.current;
-    touchStartRef.current = { x: touch.pageX, y: touch.pageY, time: Date.now(), tab: startTab, claimed: false, interrupted: false, moved: false, baseOffset: 0, multitouch: false, identifier: touch.identifier };
-    lastSwipeRef.current = { dx: 0, vx: 0, time: Date.now() };
-  };
-  const handleTouchMove = (event) => {
-    const native = event.nativeEvent;
-    const start = touchStartRef.current;
-    const touch = start ? findTouch(native.touches, start.identifier) : null;
-    if (interruptingTouchRef.current) {
-      // Buffer only the controlling finger while the native animation reports
-      // the exact position where it was frozen.
-      const pending = interruptingTouchRef.current;
-      const pendingTouch = findTouch(native.touches, pending.identifier);
-      if (pendingTouch) {
-        pending.lastX = pendingTouch.pageX;
-        pending.lastY = pendingTouch.pageY;
-      }
-      return;
-    }
-    if (!start || !touch || swipeSettlingRef.current || stageSize.width <= 0) return;
-    const fingerDx = touch.pageX - start.x;
-    const dy = touch.pageY - start.y;
-    const dx = start.interrupted ? start.baseOffset + fingerDx : fingerDx;
-    if (start.interrupted) {
-      if (Math.abs(fingerDx) < 2 && Math.abs(dy) < 2) return;
-      start.moved = true;
-      const transition = swipeTransitionRef.current;
-      if (!transition) return;
-      let clampedDx = Math.max(-stageSize.width, Math.min(stageSize.width, dx));
-      let direction = clampedDx < 0 ? -1 : clampedDx > 0 ? 1 : transition.direction;
-      const currentIndex = tabs.findIndex(([name]) => name === transition.from);
-      let nextIndex = currentIndex + (direction < 0 ? 1 : -1);
-      if (nextIndex < 0 || nextIndex >= tabs.length) {
-        clampedDx = 0;
-        direction = transition.direction;
-        nextIndex = currentIndex + (direction < 0 ? 1 : -1);
-      }
-      if (nextIndex >= 0 && nextIndex < tabs.length && transition.direction !== direction) {
-        const updated = { from: transition.from, to: tabs[nextIndex][0], direction };
-        swipeTransitionRef.current = updated;
-        setSwipeTransition(updated);
-      }
-      swipeTopX.setValue(clampedDx);
-      const now = Date.now();
-      const elapsed = Math.max(1, now - lastSwipeRef.current.time);
-      lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
-      return;
-    }
-    if (!start.claimed) {
-      if (Math.abs(dx) < 10 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
-      const currentIndex = tabs.findIndex(([name]) => name === start.tab);
-      const nextIndex = currentIndex + (dx < 0 ? 1 : -1);
-      if (nextIndex < 0 || nextIndex >= tabs.length) return;
-      start.claimed = true;
-      swipeGenerationRef.current += 1;
-      swipeStartTabRef.current = start.tab;
-      const transition = { from: start.tab, to: tabs[nextIndex][0], direction: dx < 0 ? -1 : 1 };
-      swipeTransitionRef.current = transition;
-      setSwipeTransition(transition);
-      if (addPopupVisibleRef.current) setAddPopupVisible(false);
-    }
-    const transition = swipeTransitionRef.current;
-    if (!transition) return;
-    let clampedDx = Math.max(-stageSize.width, Math.min(stageSize.width, dx));
-    let direction = clampedDx < 0 ? -1 : clampedDx > 0 ? 1 : transition.direction;
-    const currentIndex = tabs.findIndex(([name]) => name === start.tab);
-    let nextIndex = currentIndex + (direction < 0 ? 1 : -1);
-    if (nextIndex < 0 || nextIndex >= tabs.length) {
-      clampedDx = 0;
-      direction = transition.direction;
-      nextIndex = currentIndex + (direction < 0 ? 1 : -1);
-    }
-    if (nextIndex >= 0 && nextIndex < tabs.length && transition.direction !== direction) {
-      const updated = { from: start.tab, to: tabs[nextIndex][0], direction };
-      swipeTransitionRef.current = updated;
-      setSwipeTransition(updated);
-    }
-    swipeTopX.setValue(clampedDx);
-    const now = Date.now();
-    const elapsed = Math.max(1, now - lastSwipeRef.current.time);
-    lastSwipeRef.current = { dx: clampedDx, vx: (clampedDx - lastSwipeRef.current.dx) / elapsed * 1000, time: now };
-  };
-  const handleTouchEnd = (event, cancelled = false) => {
-    const touches = event?.nativeEvent?.touches || [];
-    const start = touchStartRef.current;
-    const pending = interruptingTouchRef.current;
-
-    if (pending) {
-      if (cancelled || !findTouch(touches, pending.identifier)) pending.released = true;
-      return;
-    }
-    if (!start) return;
-
-    // Only the original controlling pointer can end the gesture. Secondary
-    // fingers are ignored, whether they move or lift first.
-    if (!cancelled && findTouch(touches, start.identifier)) return;
-
-    touchStartRef.current = null;
-    const transition = swipeTransitionRef.current;
-    if (start.interrupted && !start.moved && transition && !swipeSettlingRef.current) {
-      const resumeTarget = start.resumeTarget;
-      const destination = resumeTarget === transition.from || resumeTarget === transition.to
-        ? resumeTarget
-        : transition.to;
-      finishSwipeTransition(destination, transition.direction);
-      return;
-    }
-    if (!start.claimed || !transition || swipeSettlingRef.current) return;
-    const { dx, vx } = lastSwipeRef.current;
-    let destination;
-    if (start.rebased) {
-      // Rebased gestures can begin anywhere between the two stable endpoints.
-      // Choose the nearest endpoint unless release velocity clearly favors one.
-      const distanceToFrom = Math.abs(dx);
-      const distanceToTarget = Math.abs(transition.direction * stageSize.width - dx);
-      if (vx * transition.direction > 550) destination = transition.to;
-      else if (vx * transition.direction < -550) destination = transition.from;
-      else destination = distanceToTarget < distanceToFrom ? transition.to : transition.from;
-    } else {
-      const threshold = Math.max(64, stageSize.width * 0.22);
-      const velocityCommits = vx * transition.direction > 550;
-      destination = Math.abs(dx) > threshold || velocityCommits ? transition.to : transition.from;
-    }
-    finishSwipeTransition(destination, transition.direction);
-  };
   const [filter, setFilter] = useState("All");
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => (
@@ -477,36 +104,9 @@ export default function App() {
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <View style={s.root}>
-        <View style={{flex:1, overflow:"hidden"}} onLayout={event => setStageSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={event => {
-          const start = touchStartRef.current;
-          if (start) lastSwipeRef.current = { ...lastSwipeRef.current, vx: 0 };
-          handleTouchEnd(event, true);
-        }}>
-          <View pointerEvents={swipeTransition ? "none" : "auto"} style={{flex:1, opacity: swipeTransition ? 0 : 1}}>
-            {renderPage(tab)}
-          </View>
-          {swipeTransition && stageSize.width > 0 && stageSize.height > 0 && (() => {
-            const width = stageSize.width;
-            const height = stageSize.height;
-            const direction = swipeTransition.direction;
-            const incomingX = Animated.add(swipeTopX, direction < 0 ? width : -width);
-            return <>
-              <Animated.View pointerEvents="none" style={{
-                position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 1, overflow: "hidden",
-                transform: [{ translateX: incomingX }]
-              }}>
-                {renderPage(swipeTransition.to, "none")}
-              </Animated.View>
-              <Animated.View pointerEvents="none" style={{
-                position: "absolute", left: 0, top: 0, width, height,
-                zIndex: 2, overflow: "hidden",
-                transform: [{ translateX: swipeTopX }]
-              }}>
-                {renderPage(swipeTransition.from, "none")}
-              </Animated.View>
-            </>;
-          })()}
+        <View style={{flex:1, overflow:"hidden"}}>
+          {renderPage(tab)}
+        </View>
         {popupMounted && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
@@ -525,8 +125,29 @@ export default function App() {
           </Animated.View>
         </>}
         <View style={s.bar} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
-          <Animated.View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft, transform: [{ translateX: swipeIndicatorX }, { scaleX: swipeIndicatorStretch }, { scaleX: liquidTapX }, { scaleY: liquidTapY }] }]} />
-          {tabs.map(([name, iconName], index)=>{const active=navTab===name;const highlightOpacity=slotWidth>0?swipeIndicatorX.interpolate({inputRange:tabs.map((_,i)=>i*slotWidth),outputRange:tabs.map((_,i)=>i===index?1:0),extrapolate:"clamp"}):(active?1:0);return <Pressable key={name} onPress={()=>{if(name===navTab){animateLiquidTap();}if(name==="Add"){setNavTab("Add");if(addPopupVisible){setAddPopupVisible(false);}else{setPopupMounted(true);setAddPopupVisible(true);}}else{setAddPopupVisible(false);setTab(name);setNavTab(name);}}} style={s.tab}><View style={s.pill}><View style={name === "Add" ? { transform: [{ translateX: 1 }, { translateY: -1 }] } : undefined}><Animated.View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center", transform: [{ scale: iconScales[name] }, { rotate: name === "Add" ? addIconRotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "135deg"] }) : "0deg" }] }}><GoogleSymbol name={iconName} size={25} color={C.muted}/><Animated.View pointerEvents="none" style={{position:"absolute",left:0,top:0,width:25,height:25,opacity:highlightOpacity}}><GoogleSymbol name={iconName} size={25} color={C.onPrimary}/></Animated.View></Animated.View></View></View></Pressable>})}
+          <View pointerEvents="none" style={[s.liquidIndicator, { left: indicatorLeft + Math.max(0, tabs.findIndex(([name]) => name === navTab)) * slotWidth }]} />
+          {tabs.map(([name, iconName]) => {
+            const active = navTab === name;
+            return <Pressable key={name} onPress={() => {
+              if (name === "Add") {
+                setNavTab("Add");
+                if (addPopupVisible) setAddPopupVisible(false);
+                else { setPopupMounted(true); setAddPopupVisible(true); }
+              } else {
+                setAddPopupVisible(false);
+                setTab(name);
+                setNavTab(name);
+              }
+            }} style={s.tab}>
+              <View style={s.pill}>
+                <View style={name === "Add" ? { transform: [{ translateX: 1 }, { translateY: -1 }] } : undefined}>
+                  <View style={{ width: 25, height: 25, alignItems: "center", justifyContent: "center" }}>
+                    <GoogleSymbol name={iconName} size={25} color={active ? C.onPrimary : C.muted} />
+                  </View>
+                </View>
+              </View>
+            </Pressable>;
+          })}
         </View>
         </View>
       </View>
