@@ -344,7 +344,6 @@ export default function App() {
           <View style={s.previewStage}>
             <View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, opacity: sharedTransition ? 0 : 1 }]}>
               <Image source={{ uri: selectedWallpaper.uri }} style={s.previewImage} resizeMode="cover" />
-              <View pointerEvents="none" style={s.previewShade} />
               <View pointerEvents="none" style={s.previewClock}>
                 <Text style={s.previewDate}>MONDAY, OCTOBER 12</Text>
                 <Text style={[s.previewTime,{fontSize:Math.min(windowWidth*0.19,68),lineHeight:Math.min(windowWidth*0.2,72)}]}>9:41</Text>
