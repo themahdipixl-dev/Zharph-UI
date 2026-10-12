@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing } from "react-native";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing, useWindowDimensions } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
@@ -61,6 +61,9 @@ export default function App() {
     NavigationBar.setBackgroundColorAsync("#F3EDF7").catch(() => {});
   }, []);
   const [tab, setTab] = useState("Home");
+  const [selectedWallpaper, setSelectedWallpaper] = useState({ title: items[0][0], uri: items[0][1] });
+  const [activeEditorTool, setActiveEditorTool] = useState("Depth");
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [filterScrolledLeft, setFilterScrolledLeft] = useState(false);
   const filterFadeOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -270,7 +273,41 @@ export default function App() {
   const [filter, setFilter] = useState("All");
   const [gridColumns, setGridColumns] = useState(2);
   const [userImages, setUserImages] = useState([]);
-  const renderPage = (pageTab, pointerEvents = "auto") => (
+  const renderPage = (pageTab, pointerEvents = "auto") => {
+    if (pageTab === "Editor") {
+      const previewWidth = Math.max(190, Math.min(windowWidth - 48, 300, (windowHeight - 270) * 9 / 19.5));
+      const previewHeight = previewWidth * 19.5 / 9;
+      const editorTools = [["Depth", "layers"], ["Crop", "crop"], ["Clock", "schedule"], ["Parallax", "3d_rotation"]];
+      return (
+        <View style={s.editorPage}>
+          <View style={s.editorHeader}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => setTab("Home")} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
+            <Text style={s.editorTitle}>Edit wallpaper</Text>
+            <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
+          </View>
+          <View style={s.previewStage}>
+            <View style={[s.phonePreview, { width: previewWidth, height: previewHeight }]}>
+              <Image source={{ uri: selectedWallpaper.uri }} style={s.previewImage} resizeMode="cover" />
+              <View pointerEvents="none" style={s.previewShade} />
+              <View pointerEvents="none" style={s.previewClock}>
+                <Text style={s.previewDate}>MONDAY, OCTOBER 12</Text>
+                <Text style={s.previewTime}>9:41</Text>
+              </View>
+              <View pointerEvents="none" style={s.previewBottomHint}><View style={s.previewHandle} /></View>
+            </View>
+          </View>
+          <View style={s.editorToolsHeader}><Text style={s.editorSectionTitle}>Tools</Text><Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text></View>
+          <View style={s.editorTools}>
+            {editorTools.map(([name, icon]) => <Pressable key={name} accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+              <GoogleSymbol name={icon} size={26} color={activeEditorTool === name ? C.onPrimary : C.text} />
+              <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
+            </Pressable>)}
+          </View>
+          <View style={s.editorToolPanel}><GoogleSymbol name={activeEditorTool === "Depth" ? "layers" : activeEditorTool === "Crop" ? "crop" : activeEditorTool === "Clock" ? "schedule" : "3d_rotation"} size={20} color={C.primary} /><Text style={s.editorToolPanelText}>{activeEditorTool === "Depth" ? "Create depth and place objects in front of the clock." : activeEditorTool === "Crop" ? "Adjust how your wallpaper fits the screen." : activeEditorTool === "Clock" ? "Customize the clock style and position." : "Add subtle motion to your wallpaper."}</Text></View>
+        </View>
+      );
+    }
+    return (
     <ScrollView pointerEvents={pointerEvents} nestedScrollEnabled showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={handlePageScroll} stickyHeaderIndices={(pageTab === "Home" || pageTab === "Add") ? [1] : []} contentContainerStyle={s.scroll} style={{ width: stageSize.width || "100%", height: stageSize.height || "100%" }}>
       <View style={s.header}>
         <Text style={s.brand}>Zharph<Text style={{color:C.primary}}>.</Text></Text>
@@ -292,11 +329,12 @@ export default function App() {
         </View>
       </View>}
       {pageTab === "Home" || pageTab === "Add" ? <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
-        {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
-        {items.map(([title,uri])=><Pressable key={title} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>setTab("Editor")}><Image source={{uri}} style={s.photo}/></Pressable>)}
+        {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>{setSelectedWallpaper({title:"My wallpaper",uri});setActiveEditorTool("Depth");setTab("Editor");}}><Image source={{uri}} style={s.photo}/></Pressable>)}
+        {items.map(([title,uri])=><Pressable key={title} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>{setSelectedWallpaper({title,uri});setActiveEditorTool("Depth");setTab("Editor");}}><Image source={{uri}} style={s.photo}/></Pressable>)}
       </View> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
     </ScrollView>
-  );
+    );
+  };
   const closeAddPopup = () => {
     setAddPopupVisible(false);
     setNavTab(previousNavTab);
@@ -317,7 +355,7 @@ export default function App() {
             {renderPage(tab)}
           </View>
         </View>
-        <Animated.View style={[s.bar, { transform: [{ translateY: navTranslateY }, { scale: navScale }] }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
+        {tab !== "Editor" && <Animated.View style={[s.bar, { transform: [{ translateY: navTranslateY }, { scale: navScale }] }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, {
             left: indicatorLeft,
             transform: [
@@ -354,8 +392,8 @@ export default function App() {
               </Animated.View>
             </Pressable>;
           })}
-        </Animated.View>
-        {popupMounted && <>
+        </Animated.View>}
+        {popupMounted && tab !== "Editor" && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
           }]}>
