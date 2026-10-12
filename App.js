@@ -69,7 +69,8 @@ export default function App() {
   const transitionY = useRef(new Animated.Value(0)).current;
   const transitionW = useRef(new Animated.Value(0)).current;
   const transitionH = useRef(new Animated.Value(0)).current;
-  const transitionBgX = useRef(new Animated.Value(0)).current;
+  const transitionBgOpacity = useRef(new Animated.Value(0)).current;
+  const transitionBgScale = useRef(new Animated.Value(1.04)).current;
   const openEditor = (wallpaper, cardRef) => {
     if (!cardRef?.current || !rootRef.current) {
       setSelectedWallpaper(wallpaper);
@@ -88,7 +89,8 @@ export default function App() {
         transitionY.setValue(start.y);
         transitionW.setValue(start.width);
         transitionH.setValue(start.height);
-        transitionBgX.setValue(windowWidth);
+        transitionBgOpacity.setValue(0);
+        transitionBgScale.setValue(1.04);
         setTab("Editor");
       });
     });
@@ -284,7 +286,10 @@ export default function App() {
         Animated.timing(transitionY, { toValue: start.y, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionW, { toValue: start.width, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
-        Animated.timing(transitionBgX, { toValue: windowWidth, duration: 460, easing, useNativeDriver: false })
+        Animated.parallel([
+          Animated.timing(transitionBgOpacity, { toValue: 0, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(transitionBgScale, { toValue: 1.04, duration: 300, easing, useNativeDriver: true })
+        ])
       ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
       return;
     }
@@ -299,12 +304,13 @@ export default function App() {
             Animated.timing(transitionY, { toValue: target.y, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionW, { toValue: target.width, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
-            Animated.timing(transitionBgX, { toValue: 0, duration: 460, easing, useNativeDriver: false })
+            Animated.timing(transitionBgOpacity, { toValue: 1, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(transitionBgScale, { toValue: 1, duration: 460, easing, useNativeDriver: true })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
       });
     });
-  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgX, windowWidth]);
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale]);
 
   const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
@@ -360,7 +366,8 @@ export default function App() {
               transitionY.setValue(last.target.y);
               transitionW.setValue(last.target.width);
               transitionH.setValue(last.target.height);
-              transitionBgX.setValue(0);
+              transitionBgOpacity.setValue(1);
+              transitionBgScale.setValue(1);
               setSharedTransition({ uri: last.uri, start: last.start, closing: true });
               setTab("Home");
             }} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
@@ -437,7 +444,7 @@ export default function App() {
           </View>
         </View>
         {sharedTransition && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <Animated.View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: windowWidth, backgroundColor: C.bg, transform: [{ translateX: transitionBgX }] }} />
+          <Animated.View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: C.surface2, opacity: transitionBgOpacity, transform: [{ scale: transitionBgScale }] }} />
           <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: 16, overflow: "hidden", backgroundColor: C.surface2 }}>
             <Image source={{ uri: sharedTransition.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
           </Animated.View>
