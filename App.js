@@ -64,6 +64,7 @@ export default function App() {
   const rootRef = useRef(null);
   const previewTargetRef = useRef(null);
   const [sharedTransition, setSharedTransition] = useState(null);
+  const lastEditorTransition = useRef(null);
   const transitionX = useRef(new Animated.Value(0)).current;
   const transitionY = useRef(new Animated.Value(0)).current;
   const transitionW = useRef(new Animated.Value(0)).current;
@@ -81,7 +82,8 @@ export default function App() {
         const start = { x: cardX - rootX, y: cardY - rootY, width: cardW, height: cardH };
         setSelectedWallpaper(wallpaper);
         setActiveEditorTool("Depth");
-        setSharedTransition({ uri: wallpaper.uri, start });
+        lastEditorTransition.current = { uri: wallpaper.uri, start, target: null };
+        setSharedTransition({ uri: wallpaper.uri, start, closing: false });
         transitionX.setValue(start.x);
         transitionY.setValue(start.y);
         transitionW.setValue(start.width);
@@ -273,17 +275,31 @@ export default function App() {
   }, [navTab, iconScales]);
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   useEffect(() => {
-    if (tab !== "Editor" || !sharedTransition || !previewTargetRef.current || !rootRef.current) return;
+    if (!sharedTransition || !rootRef.current) return;
+    const easing = Easing.bezier(0.22, 1, 0.36, 1);
+    if (sharedTransition.closing) {
+      const start = sharedTransition.start;
+      Animated.parallel([
+        Animated.timing(transitionX, { toValue: start.x, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionY, { toValue: start.y, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionW, { toValue: start.width, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionShade, { toValue: 0, duration: 460, easing, useNativeDriver: false })
+      ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
+      return;
+    }
+    if (tab !== "Editor" || !previewTargetRef.current) return;
     requestAnimationFrame(() => {
       previewTargetRef.current?.measureInWindow((targetX, targetY, targetW, targetH) => {
         rootRef.current?.measureInWindow((rootX, rootY) => {
           const target = { x: targetX - rootX, y: targetY - rootY, width: targetW, height: targetH };
+          if (lastEditorTransition.current) lastEditorTransition.current.target = target;
           Animated.parallel([
-            Animated.timing(transitionX, { toValue: target.x, duration: 420, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
-            Animated.timing(transitionY, { toValue: target.y, duration: 420, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
-            Animated.timing(transitionW, { toValue: target.width, duration: 420, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
-            Animated.timing(transitionH, { toValue: target.height, duration: 420, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
-            Animated.timing(transitionShade, { toValue: 1, duration: 460, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false })
+            Animated.timing(transitionX, { toValue: target.x, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionY, { toValue: target.y, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionW, { toValue: target.width, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionShade, { toValue: 1, duration: 460, easing, useNativeDriver: false })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
       });
@@ -337,7 +353,17 @@ export default function App() {
       return (
         <View style={[s.editorPage, { backgroundColor: sharedTransition ? C.surface2 : C.bg }]}>
           <View style={s.editorHeader}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => setTab("Home")} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => {
+              const last = lastEditorTransition.current;
+              if (!last?.target) { setTab("Home"); return; }
+              transitionX.setValue(last.target.x);
+              transitionY.setValue(last.target.y);
+              transitionW.setValue(last.target.width);
+              transitionH.setValue(last.target.height);
+              transitionShade.setValue(1);
+              setSharedTransition({ uri: last.uri, start: last.start, closing: true });
+              setTab("Home");
+            }} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
             <Text style={s.editorTitle}>Edit wallpaper</Text>
             <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
           </View>
@@ -406,8 +432,8 @@ export default function App() {
       <View ref={rootRef} collapsable={false} style={s.root}>
         <View style={{ flex: 1, backgroundColor: C.bg }}>
           <View style={{flex:1, overflow:"hidden", backgroundColor:C.bg}}>
-            {renderPage(sharedTransition ? "Home" : tab)}
-            {sharedTransition && <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: 0 }]}>{renderPage("Editor")}</View>}
+            {renderPage(sharedTransition ? (sharedTransition.closing ? "Editor" : "Home") : tab)}
+            {sharedTransition && !sharedTransition.closing && <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: 0 }]}>{renderPage("Editor")}</View>}
           </View>
         </View>
         {sharedTransition && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
