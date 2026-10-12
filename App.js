@@ -307,7 +307,7 @@ export default function App() {
           <View style={s.editorToolsHeader}><Text style={s.editorSectionTitle}>Tools</Text><Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text></View>
           <View style={s.editorTools}>
             {editorTools.map(([name, icon]) => <Pressable key={name} accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
-              <GoogleSymbol name={icon} size={name === "Depth" ? 23 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
+              <GoogleSymbol name={icon} size={26} color={activeEditorTool === name ? C.onPrimary : C.text} />
               <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
             </Pressable>)}
           </View>
