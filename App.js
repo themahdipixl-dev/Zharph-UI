@@ -61,20 +61,34 @@ export default function App() {
     NavigationBar.setBackgroundColorAsync("#F3EDF7").catch(() => {});
   }, []);
   const [tab, setTab] = useState("Home");
-  const editorEnterProgress = useRef(new Animated.Value(1)).current;
-  const openEditor = (wallpaper) => {
-    setSelectedWallpaper(wallpaper);
-    setActiveEditorTool("Depth");
-    editorEnterProgress.stopAnimation();
-    editorEnterProgress.setValue(0);
-    setTab("Editor");
-    requestAnimationFrame(() => {
-      Animated.timing(editorEnterProgress, {
-        toValue: 1,
-        duration: 340,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true
-      }).start();
+  const rootRef = useRef(null);
+  const previewTargetRef = useRef(null);
+  const [sharedTransition, setSharedTransition] = useState(null);
+  const transitionX = useRef(new Animated.Value(0)).current;
+  const transitionY = useRef(new Animated.Value(0)).current;
+  const transitionW = useRef(new Animated.Value(0)).current;
+  const transitionH = useRef(new Animated.Value(0)).current;
+  const transitionShade = useRef(new Animated.Value(0)).current;
+  const openEditor = (wallpaper, cardRef) => {
+    if (!cardRef?.current || !rootRef.current) {
+      setSelectedWallpaper(wallpaper);
+      setActiveEditorTool("Depth");
+      setTab("Editor");
+      return;
+    }
+    cardRef.current.measureInWindow((cardX, cardY, cardW, cardH) => {
+      rootRef.current?.measureInWindow((rootX, rootY) => {
+        const start = { x: cardX - rootX, y: cardY - rootY, width: cardW, height: cardH };
+        setSelectedWallpaper(wallpaper);
+        setActiveEditorTool("Depth");
+        setSharedTransition({ uri: wallpaper.uri, start });
+        transitionX.setValue(start.x);
+        transitionY.setValue(start.y);
+        transitionW.setValue(start.width);
+        transitionH.setValue(start.height);
+        transitionShade.setValue(0);
+        setTab("Editor");
+      });
     });
   };
   const homeScrollRef = useRef(null);
@@ -258,6 +272,24 @@ export default function App() {
     });
   }, [navTab, iconScales]);
   const [addPopupVisible, setAddPopupVisible] = useState(false);
+  useEffect(() => {
+    if (tab !== "Editor" || !sharedTransition || !previewTargetRef.current || !rootRef.current) return;
+    requestAnimationFrame(() => {
+      previewTargetRef.current?.measureInWindow((targetX, targetY, targetW, targetH) => {
+        rootRef.current?.measureInWindow((rootX, rootY) => {
+          const target = { x: targetX - rootX, y: targetY - rootY, width: targetW, height: targetH };
+          Animated.parallel([
+            Animated.timing(transitionX, { toValue: target.x, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+            Animated.timing(transitionY, { toValue: target.y, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+            Animated.timing(transitionW, { toValue: target.width, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+            Animated.timing(transitionH, { toValue: target.height, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+            Animated.timing(transitionShade, { toValue: 1, duration: 360, easing: Easing.out(Easing.cubic), useNativeDriver: false })
+          ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
+        });
+      });
+    });
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionShade]);
+
   const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
@@ -303,10 +335,6 @@ export default function App() {
       const previewHeight = previewWidth * 19.5 / 9;
       const editorTools = [["Depth", "layers"], ["Crop", "crop"], ["Clock", "schedule"], ["Parallax", "3d_rotation"], ["Effects", "auto_awesome"]];
       return (
-        <Animated.View style={{ flex: 1, opacity: editorEnterProgress, transform: [
-          { translateX: editorEnterProgress.interpolate({ inputRange: [0, 1], outputRange: [Math.min(windowWidth * 0.22, 90), 0] }) },
-          { scale: editorEnterProgress.interpolate({ inputRange: [0, 1], outputRange: [0.975, 1] }) }
-        ] }}>
         <View style={s.editorPage}>
           <View style={s.editorHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => setTab("Home")} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
@@ -314,7 +342,7 @@ export default function App() {
             <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
           </View>
           <View style={s.previewStage}>
-            <View style={[s.phonePreview, { width: previewWidth, height: previewHeight }]}>
+            <View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, opacity: sharedTransition ? 0 : 1 }]}>
               <Image source={{ uri: selectedWallpaper.uri }} style={s.previewImage} resizeMode="cover" />
               <View pointerEvents="none" style={s.previewShade} />
               <View pointerEvents="none" style={s.previewClock}>
@@ -332,7 +360,6 @@ export default function App() {
             </Pressable>)}
           </View>
         </View>
-        </Animated.View>
       );
     }
     return (
@@ -357,8 +384,8 @@ export default function App() {
         </View>
       </View>}
       {pageTab === "Home" || pageTab === "Add" ? <View style={[s.grid, gridColumns === 2 && s.gridTwoColumns]}>
-        {userImages.map((uri,index)=><Pressable key={`user-${index}-${uri}`} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>openEditor({title:"My wallpaper",uri})}><Image source={{uri}} style={s.photo}/></Pressable>)}
-        {items.map(([title,uri])=><Pressable key={title} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>openEditor({title,uri})}><Image source={{uri}} style={s.photo}/></Pressable>)}
+        {userImages.map((uri,index)=>{ const cardRef = React.createRef(); return <Pressable key={`user-${index}-${uri}`} ref={cardRef} collapsable={false} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>openEditor({title:"My wallpaper",uri}, cardRef)}><Image source={{uri}} style={s.photo}/></Pressable>; })}
+        {items.map(([title,uri])=>{ const cardRef = React.createRef(); return <Pressable key={title} ref={cardRef} collapsable={false} style={[s.card, gridColumns === 2 && s.cardTwoColumns]} onPress={()=>openEditor({title,uri}, cardRef)}><Image source={{uri}} style={s.photo}/></Pressable>; })}
       </View> : <View style={s.placeholder}><View style={s.bigIcon}><GoogleSymbol name={pageTab==="Depth"?"layers":pageTab==="Saved"?"bookmark":pageTab==="Settings"?"settings":"image"} size={34} color={C.primary}/></View><Text style={s.title}>{pageTab==="Editor"?"Wallpaper editor":pageTab}</Text><Text style={s.placeholderText}>{pageTab==="Depth"?"Choose a photo to start creating a depth wallpaper.":pageTab==="Saved"?"Your saved wallpapers will appear here.":pageTab==="Settings"?"Customize your Zharph experience.":"Preview your selected wallpaper."}</Text><Pressable style={s.primaryButton} onPress={()=>setTab("Home")}><Text style={s.primaryText}>Back to Home</Text></Pressable></View>}
     </ScrollView>
     );
@@ -377,12 +404,18 @@ export default function App() {
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
-      <View style={s.root}>
+      <View ref={rootRef} collapsable={false} style={s.root}>
         <View style={{ flex: 1, backgroundColor: C.bg }}>
           <View style={{flex:1, overflow:"hidden", backgroundColor:C.bg}}>
             {renderPage(tab)}
           </View>
         </View>
+        {sharedTransition && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <Animated.View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: C.bg, opacity: transitionShade }} />
+          <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: 16, overflow: "hidden", backgroundColor: C.surface2 }}>
+            <Image source={{ uri: sharedTransition.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+          </Animated.View>
+        </View>}
         {tab !== "Editor" && <Animated.View style={[s.bar, { transform: [{ translateY: navTranslateY }, { scale: navScale }] }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, {
             left: indicatorLeft,
