@@ -283,7 +283,7 @@ export default function App() {
   const [userImages, setUserImages] = useState([]);
   const renderPage = (pageTab, pointerEvents = "auto") => {
     if (pageTab === "Editor") {
-      const previewWidth = Math.max(160, Math.min(windowWidth - 44, 325, (windowHeight - 240) * 9 / 19.5));
+      const previewWidth = Math.max(160, Math.min(windowWidth - 44, 320, (windowHeight - 240) * 9 / 19.5));
       const previewHeight = previewWidth * 19.5 / 9;
       const editorTools = [["Depth", "layers"], ["Crop", "crop"], ["Clock", "schedule"], ["Parallax", "3d_rotation"], ["Effects", "auto_awesome"]];
       return (
