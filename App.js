@@ -406,7 +406,8 @@ export default function App() {
       <View ref={rootRef} collapsable={false} style={s.root}>
         <View style={{ flex: 1, backgroundColor: C.bg }}>
           <View style={{flex:1, overflow:"hidden", backgroundColor:C.bg}}>
-            {renderPage(tab)}
+            {renderPage(sharedTransition ? "Home" : tab)}
+            {sharedTransition && <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: 0 }]}>{renderPage("Editor")}</View>}
           </View>
         </View>
         {sharedTransition && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
