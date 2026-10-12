@@ -279,11 +279,11 @@ export default function App() {
         rootRef.current?.measureInWindow((rootX, rootY) => {
           const target = { x: targetX - rootX, y: targetY - rootY, width: targetW, height: targetH };
           Animated.parallel([
-            Animated.timing(transitionX, { toValue: target.x, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-            Animated.timing(transitionY, { toValue: target.y, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-            Animated.timing(transitionW, { toValue: target.width, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-            Animated.timing(transitionH, { toValue: target.height, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-            Animated.timing(transitionShade, { toValue: 1, duration: 360, easing: Easing.out(Easing.cubic), useNativeDriver: false })
+            Animated.timing(transitionX, { toValue: target.x, duration: 520, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
+            Animated.timing(transitionY, { toValue: target.y, duration: 520, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
+            Animated.timing(transitionW, { toValue: target.width, duration: 520, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
+            Animated.timing(transitionH, { toValue: target.height, duration: 520, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false }),
+            Animated.timing(transitionShade, { toValue: 1, duration: 620, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: false })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
       });
