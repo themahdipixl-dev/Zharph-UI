@@ -61,6 +61,7 @@ export default function App() {
     NavigationBar.setBackgroundColorAsync("#F3EDF7").catch(() => {});
   }, []);
   const [tab, setTab] = useState("Home");
+  const [filterScrolledLeft, setFilterScrolledLeft] = useState(false);
   const [navTab, setNavTab] = useState("Home");
   const [barWidth, setBarWidth] = useState(0);
   const navTranslateY = useRef(new Animated.Value(0)).current;
@@ -273,8 +274,8 @@ export default function App() {
       {(pageTab === "Home" || pageTab === "Add") && <View style={s.stickyFilters}>
         <View pointerEvents="none" style={s.stickyFilterBackdrop} />
         <View pointerEvents="none" style={s.filterFade}><Svg width="10" height="100%" viewBox="0 0 10 60" preserveAspectRatio="none"><Defs><LinearGradient id="filterFadeGradient" x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor={C.bg} stopOpacity="0" /><Stop offset="1" stopColor={C.bg} stopOpacity="1" /></LinearGradient></Defs><Rect x="0" y="0" width="10" height="60" fill="url(#filterFadeGradient)" /></Svg></View>
-        <View pointerEvents="none" style={s.filterFadeLeft}><Svg width="10" height="100%" viewBox="0 0 10 60" preserveAspectRatio="none"><Defs><LinearGradient id="filterFadeLeftGradient" x1="1" y1="0" x2="0" y2="0"><Stop offset="0" stopColor={C.bg} stopOpacity="0" /><Stop offset="1" stopColor={C.bg} stopOpacity="1" /></LinearGradient></Defs><Rect x="0" y="0" width="10" height="60" fill="url(#filterFadeLeftGradient)" /></Svg></View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters}>
+        {filterScrolledLeft && <View pointerEvents="none" style={s.filterFadeLeft}><Svg width="10" height="100%" viewBox="0 0 10 60" preserveAspectRatio="none"><Defs><LinearGradient id="filterFadeLeftGradient" x1="1" y1="0" x2="0" y2="0"><Stop offset="0" stopColor={C.bg} stopOpacity="0" /><Stop offset="1" stopColor={C.bg} stopOpacity="1" /></LinearGradient></Defs><Rect x="0" y="0" width="10" height="60" fill="url(#filterFadeLeftGradient)" /></Svg></View>}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroller} contentContainerStyle={s.filters} scrollEventThrottle={16} onScroll={event => { const scrolled = event.nativeEvent.contentOffset.x > 1; setFilterScrolledLeft(current => current === scrolled ? current : scrolled); }}>
           {["All","Depth","Parallax","Minimal"].map(x=><Pressable key={x} onPress={()=>setFilter(x)} style={[s.filter,filter===x&&s.filterOn]}><Text style={[s.filterText,filter===x&&{color:C.onPrimary}]}>{x}</Text></Pressable>)}
         </ScrollView>
         <View pointerEvents="none" style={s.stickyFilterIcon}>
