@@ -148,11 +148,12 @@ export default function App() {
         useNativeDriver: true
       })
     ]);
-    const cards = Animated.stagger(closing ? 35 : 27, editorToolMotion.map(makeMotion));
-    const headings = Animated.stagger(closing ? 35 : 55, editorToolsHeaderMotion.map(makeMotion));
+    const cards = Animated.stagger(27, editorToolMotion.map(makeMotion));
+    const headings = Animated.stagger(55, editorToolsHeaderMotion.map(makeMotion));
     const entranceMotion = Animated.parallel([cards, headings]);
+    const exitMotion = Animated.parallel(allMotion.map(makeMotion));
     const motion = closing
-      ? entranceMotion
+      ? exitMotion
       : Animated.sequence([Animated.delay(150), entranceMotion]);
     motion.start(({ finished }) => {
       if (finished && onDone) onDone();
