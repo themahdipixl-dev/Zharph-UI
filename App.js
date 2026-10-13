@@ -149,7 +149,7 @@ export default function App() {
       })
     ]);
     const cards = Animated.stagger(27, editorToolMotion.map(makeMotion));
-    const headings = Animated.stagger(55, editorToolsHeaderMotion.map(makeMotion));
+    const headings = Animated.stagger(27, editorToolsHeaderMotion.map(makeMotion));
     const entranceMotion = Animated.parallel([cards, headings]);
     const exitMotion = Animated.parallel(allMotion.map(makeMotion));
     const motion = closing
