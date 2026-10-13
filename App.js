@@ -318,10 +318,7 @@ export default function App() {
         Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionRadius, { toValue: 16, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionBorderWidth, { toValue: 0, duration: 420, easing, useNativeDriver: false }),
-        Animated.sequence([
-          Animated.delay(240),
-          headerExit
-        ]),
+        headerExit,
         Animated.parallel([
           Animated.timing(transitionBgOpacity, { toValue: 0, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
           Animated.timing(transitionBgScale, { toValue: 1.04, duration: 300, easing, useNativeDriver: true })
