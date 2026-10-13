@@ -119,6 +119,10 @@ export default function App() {
     opacity: new Animated.Value(0),
     translateY: new Animated.Value(22)
   }))).current;
+  const editorToolsHeaderMotion = useRef(Array.from({ length: 2 }, () => ({
+    opacity: new Animated.Value(0),
+    translateY: new Animated.Value(22)
+  }))).current;
   const editorToolsExitRunning = useRef(false);
   const runEditorToolsMotion = useCallback((closing = false, onDone) => {
     editorToolMotion.forEach((motion, index) => {
