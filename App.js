@@ -69,6 +69,8 @@ export default function App() {
   const transitionY = useRef(new Animated.Value(0)).current;
   const transitionW = useRef(new Animated.Value(0)).current;
   const transitionH = useRef(new Animated.Value(0)).current;
+  const transitionRadius = useRef(new Animated.Value(16)).current;
+  const transitionBorderWidth = useRef(new Animated.Value(0)).current;
   const transitionBgOpacity = useRef(new Animated.Value(0)).current;
   const transitionBgScale = useRef(new Animated.Value(1.04)).current;
   const openEditor = (wallpaper, cardRef) => {
@@ -89,6 +91,8 @@ export default function App() {
         transitionY.setValue(start.y);
         transitionW.setValue(start.width);
         transitionH.setValue(start.height);
+        transitionRadius.setValue(16);
+        transitionBorderWidth.setValue(0);
         transitionBgOpacity.setValue(0);
         transitionBgScale.setValue(1.04);
         setTab("Editor");
@@ -286,6 +290,8 @@ export default function App() {
         Animated.timing(transitionY, { toValue: start.y, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionW, { toValue: start.width, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionRadius, { toValue: 16, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionBorderWidth, { toValue: 0, duration: 420, easing, useNativeDriver: false }),
         Animated.parallel([
           Animated.timing(transitionBgOpacity, { toValue: 0, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
           Animated.timing(transitionBgScale, { toValue: 1.04, duration: 300, easing, useNativeDriver: true })
@@ -304,13 +310,15 @@ export default function App() {
             Animated.timing(transitionY, { toValue: target.y, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionW, { toValue: target.width, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionRadius, { toValue: 28, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionBorderWidth, { toValue: 1, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
             Animated.timing(transitionBgScale, { toValue: 1, duration: 300, easing, useNativeDriver: true })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
       });
     });
-  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale]);
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth]);
 
   const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
@@ -366,6 +374,8 @@ export default function App() {
               transitionY.setValue(last.target.y);
               transitionW.setValue(last.target.width);
               transitionH.setValue(last.target.height);
+              transitionRadius.setValue(28);
+              transitionBorderWidth.setValue(1);
               transitionBgOpacity.setValue(1);
               transitionBgScale.setValue(1);
               setSharedTransition({ uri: last.uri, start: last.start, closing: true });
@@ -445,7 +455,7 @@ export default function App() {
         </View>
         {sharedTransition && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <Animated.View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: C.bg, opacity: transitionBgOpacity, transform: [{ scale: transitionBgScale }] }} />
-          <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: 16, overflow: "hidden", backgroundColor: C.surface2 }}>
+          <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: transitionRadius, borderWidth: transitionBorderWidth, borderColor: C.outline, overflow: "hidden", backgroundColor: C.surface2 }}>
             <Image source={{ uri: sharedTransition.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
           </Animated.View>
         </View>}
