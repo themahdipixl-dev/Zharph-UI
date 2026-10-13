@@ -295,18 +295,18 @@ export default function App() {
   useEffect(() => {
     if (!sharedTransition || !rootRef.current) return;
     const easing = Easing.bezier(0.22, 1, 0.36, 1);
-    const headerExit = Animated.stagger(55, [
+    const headerExit = Animated.stagger(35, [
       Animated.parallel([
-        Animated.timing(editorBackOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(editorBackY, { toValue: -12, duration: 220, easing, useNativeDriver: true })
+        Animated.timing(editorBackOpacity, { toValue: 0, duration: 120, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorBackY, { toValue: -12, duration: 150, easing, useNativeDriver: true })
       ]),
       Animated.parallel([
-        Animated.timing(editorTitleOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(editorTitleY, { toValue: -12, duration: 220, easing, useNativeDriver: true })
+        Animated.timing(editorTitleOpacity, { toValue: 0, duration: 120, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTitleY, { toValue: -12, duration: 150, easing, useNativeDriver: true })
       ]),
       Animated.parallel([
-        Animated.timing(editorApplyOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(editorApplyY, { toValue: -12, duration: 220, easing, useNativeDriver: true })
+        Animated.timing(editorApplyOpacity, { toValue: 0, duration: 120, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorApplyY, { toValue: -12, duration: 150, easing, useNativeDriver: true })
       ])
     ]);
     if (sharedTransition.closing) {
