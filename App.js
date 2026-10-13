@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing, useWindowDimensions } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -120,7 +120,7 @@ export default function App() {
     translateY: new Animated.Value(22)
   }))).current;
   const editorToolsExitRunning = useRef(false);
-  const runEditorToolsMotion = (closing = false, onDone) => {
+  const runEditorToolsMotion = useCallback((closing = false, onDone) => {
     editorToolMotion.forEach((motion, index) => {
       motion.opacity.stopAnimation();
       motion.translateY.stopAnimation();
@@ -146,12 +146,12 @@ export default function App() {
     Animated.stagger(27, animations).start(({ finished }) => {
       if (finished && onDone) onDone();
     });
-  };
+  }, [editorToolMotion]);
   useEffect(() => {
     if (tab === "Editor" && !sharedTransition && !editorToolsExitRunning.current) {
       runEditorToolsMotion(false);
     }
-  }, [tab, sharedTransition]);
+  }, [tab, sharedTransition, runEditorToolsMotion]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [filterScrolledLeft, setFilterScrolledLeft] = useState(false);
   const filterFadeOpacity = useRef(new Animated.Value(0)).current;
