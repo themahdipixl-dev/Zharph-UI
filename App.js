@@ -71,8 +71,12 @@ export default function App() {
   const transitionH = useRef(new Animated.Value(0)).current;
   const transitionRadius = useRef(new Animated.Value(16)).current;
   const transitionBorderWidth = useRef(new Animated.Value(0)).current;
-  const editorHeaderOpacity = useRef(new Animated.Value(0)).current;
-  const editorHeaderY = useRef(new Animated.Value(12)).current;
+  const editorBackOpacity = useRef(new Animated.Value(0)).current;
+  const editorBackY = useRef(new Animated.Value(-12)).current;
+  const editorTitleOpacity = useRef(new Animated.Value(0)).current;
+  const editorTitleY = useRef(new Animated.Value(-12)).current;
+  const editorApplyOpacity = useRef(new Animated.Value(0)).current;
+  const editorApplyY = useRef(new Animated.Value(-12)).current;
   const transitionBgOpacity = useRef(new Animated.Value(0)).current;
   const transitionBgScale = useRef(new Animated.Value(1.04)).current;
   const openEditor = (wallpaper, cardRef) => {
@@ -95,8 +99,12 @@ export default function App() {
         transitionH.setValue(start.height);
         transitionRadius.setValue(16);
         transitionBorderWidth.setValue(0);
-        editorHeaderOpacity.setValue(0);
-        editorHeaderY.setValue(12);
+        editorBackOpacity.setValue(0);
+        editorBackY.setValue(-12);
+        editorTitleOpacity.setValue(0);
+        editorTitleY.setValue(-12);
+        editorApplyOpacity.setValue(0);
+        editorApplyY.setValue(-12);
         transitionBgOpacity.setValue(0);
         transitionBgScale.setValue(1.04);
         setTab("Editor");
@@ -287,6 +295,20 @@ export default function App() {
   useEffect(() => {
     if (!sharedTransition || !rootRef.current) return;
     const easing = Easing.bezier(0.22, 1, 0.36, 1);
+    const headerExit = Animated.stagger(55, [
+      Animated.parallel([
+        Animated.timing(editorBackOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorBackY, { toValue: -12, duration: 220, easing, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorTitleOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTitleY, { toValue: -12, duration: 220, easing, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorApplyOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorApplyY, { toValue: -12, duration: 220, easing, useNativeDriver: true })
+      ])
+    ]);
     if (sharedTransition.closing) {
       const start = sharedTransition.start;
       Animated.parallel([
@@ -296,8 +318,10 @@ export default function App() {
         Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionRadius, { toValue: 16, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionBorderWidth, { toValue: 0, duration: 420, easing, useNativeDriver: false }),
-        Animated.timing(editorHeaderOpacity, { toValue: 0, duration: 240, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(editorHeaderY, { toValue: -7, duration: 420, easing, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(300),
+          headerExit
+        ]),
         Animated.parallel([
           Animated.timing(transitionBgOpacity, { toValue: 0, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
           Animated.timing(transitionBgScale, { toValue: 1.04, duration: 300, easing, useNativeDriver: true })
@@ -311,6 +335,20 @@ export default function App() {
         rootRef.current?.measureInWindow((rootX, rootY) => {
           const target = { x: targetX - rootX, y: targetY - rootY, width: targetW, height: targetH };
           if (lastEditorTransition.current) lastEditorTransition.current.target = target;
+          const headerEnter = Animated.stagger(55, [
+            Animated.parallel([
+              Animated.timing(editorBackOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorBackY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorTitleOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTitleY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorApplyOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorApplyY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ])
+          ]);
           Animated.parallel([
             Animated.timing(transitionX, { toValue: target.x, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionY, { toValue: target.y, duration: 420, easing, useNativeDriver: false }),
@@ -318,15 +356,17 @@ export default function App() {
             Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionRadius, { toValue: 28, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionBorderWidth, { toValue: 1, duration: 420, easing, useNativeDriver: false }),
-            Animated.timing(editorHeaderOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-            Animated.timing(editorHeaderY, { toValue: 0, duration: 420, easing, useNativeDriver: true }),
+            Animated.sequence([
+              Animated.delay(420),
+              headerEnter
+            ]),
             Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
             Animated.timing(transitionBgScale, { toValue: 1, duration: 300, easing, useNativeDriver: true })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
       });
     });
-  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth, editorHeaderOpacity, editorHeaderY]);
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth, editorBackOpacity, editorBackY, editorTitleOpacity, editorTitleY, editorApplyOpacity, editorApplyY]);
 
   const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
@@ -384,8 +424,12 @@ export default function App() {
               transitionH.setValue(last.target.height);
               transitionRadius.setValue(28);
               transitionBorderWidth.setValue(1);
-              editorHeaderOpacity.setValue(1);
-              editorHeaderY.setValue(0);
+              editorBackOpacity.setValue(1);
+              editorBackY.setValue(0);
+              editorTitleOpacity.setValue(1);
+              editorTitleY.setValue(0);
+              editorApplyOpacity.setValue(1);
+              editorApplyY.setValue(0);
               transitionBgOpacity.setValue(1);
               transitionBgScale.setValue(1);
               setSharedTransition({ uri: last.uri, start: last.start, closing: true });
@@ -468,11 +512,11 @@ export default function App() {
           <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: transitionRadius, borderWidth: transitionBorderWidth, borderColor: C.outline, overflow: "hidden", backgroundColor: C.surface2 }}>
             <Image source={{ uri: sharedTransition.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
           </Animated.View>
-          <Animated.View style={{ position: "absolute", left: 20, right: 20, top: 8, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", opacity: editorHeaderOpacity, transform: [{ translateY: editorHeaderY }] }}>
-            <View style={{ width: 42, height: 42, alignItems: "flex-start", justifyContent: "center" }}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></View>
-            <Text style={{ color: C.text, fontSize: 19, fontWeight: "700", flex: 1, marginLeft: 4, transform: [{ translateY: -2 }] }}>Edit wallpaper</Text>
-            <View style={{ paddingHorizontal: 17, paddingVertical: 10, borderRadius: 20, backgroundColor: C.primary }}><Text style={{ color: C.onPrimary, fontSize: 13, fontWeight: "700", transform: [{ translateY: -2 }] }}>Apply</Text></View>
-          </Animated.View>
+          <View style={{ position: "absolute", left: 20, right: 20, top: 8, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Animated.View style={{ width: 42, height: 42, alignItems: "flex-start", justifyContent: "center", opacity: editorBackOpacity, transform: [{ translateY: editorBackY }] }}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Animated.View>
+            <Animated.Text style={{ color: C.text, fontSize: 19, fontWeight: "700", flex: 1, marginLeft: 4, transform: [{ translateY: editorTitleY }], opacity: editorTitleOpacity }}>Edit wallpaper</Animated.Text>
+            <Animated.View style={{ paddingHorizontal: 17, paddingVertical: 10, borderRadius: 20, backgroundColor: C.primary, opacity: editorApplyOpacity, transform: [{ translateY: editorApplyY }] }}><Text style={{ color: C.onPrimary, fontSize: 13, fontWeight: "700", transform: [{ translateY: -2 }] }}>Apply</Text></Animated.View>
+          </View>
         </View>}
         {tab !== "Editor" && <Animated.View style={[s.bar, { transform: [{ translateY: navTranslateY }, { scale: navScale }] }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
           <Animated.View pointerEvents="none" style={[s.liquidIndicator, {
