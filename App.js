@@ -150,7 +150,11 @@ export default function App() {
     ]);
     const cards = Animated.stagger(27, editorToolMotion.map(makeMotion));
     const headings = Animated.stagger(55, editorToolsHeaderMotion.map(makeMotion));
-    Animated.parallel([cards, headings]).start(({ finished }) => {
+    const entranceMotion = Animated.parallel([cards, headings]);
+    const motion = closing
+      ? entranceMotion
+      : Animated.sequence([Animated.delay(150), entranceMotion]);
+    motion.start(({ finished }) => {
       if (finished && onDone) onDone();
     });
   }, [editorToolMotion, editorToolsHeaderMotion]);
