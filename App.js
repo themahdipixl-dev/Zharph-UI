@@ -115,6 +115,43 @@ export default function App() {
   const homeScrollY = useRef(0);
   const [selectedWallpaper, setSelectedWallpaper] = useState({ title: items[0][0], uri: items[0][1] });
   const [activeEditorTool, setActiveEditorTool] = useState("Depth");
+  const editorToolMotion = useRef(Array.from({ length: 5 }, () => ({
+    opacity: new Animated.Value(0),
+    translateY: new Animated.Value(22)
+  }))).current;
+  const editorToolsExitRunning = useRef(false);
+  const runEditorToolsMotion = (closing = false, onDone) => {
+    editorToolMotion.forEach((motion, index) => {
+      motion.opacity.stopAnimation();
+      motion.translateY.stopAnimation();
+      if (!closing) {
+        motion.opacity.setValue(0);
+        motion.translateY.setValue(22);
+      }
+    });
+    const animations = editorToolMotion.map((motion) => Animated.parallel([
+      Animated.timing(motion.opacity, {
+        toValue: closing ? 0 : 1,
+        duration: 210,
+        easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }),
+      Animated.timing(motion.translateY, {
+        toValue: closing ? -22 : 0,
+        duration: 240,
+        easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        useNativeDriver: true
+      })
+    ]));
+    Animated.stagger(27, closing ? animations.slice().reverse() : animations).start(({ finished }) => {
+      if (finished && onDone) onDone();
+    });
+  };
+  useEffect(() => {
+    if (tab === "Editor" && !sharedTransition && !editorToolsExitRunning.current) {
+      runEditorToolsMotion(false);
+    }
+  }, [tab, sharedTransition]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [filterScrolledLeft, setFilterScrolledLeft] = useState(false);
   const filterFadeOpacity = useRef(new Animated.Value(0)).current;
@@ -413,9 +450,13 @@ export default function App() {
         <View style={[s.editorPage, { backgroundColor: sharedTransition ? C.surface2 : C.bg }]}>
           <View style={s.editorHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => {
-              const last = lastEditorTransition.current;
-              if (!last?.target) { setTab("Home"); return; }
-              transitionX.setValue(last.target.x);
+              if (editorToolsExitRunning.current) return;
+              editorToolsExitRunning.current = true;
+              runEditorToolsMotion(true, () => {
+                editorToolsExitRunning.current = false;
+                const last = lastEditorTransition.current;
+                if (!last?.target) { setTab("Home"); return; }
+                transitionX.setValue(last.target.x);
               transitionY.setValue(last.target.y);
               transitionW.setValue(last.target.width);
               transitionH.setValue(last.target.height);
@@ -429,8 +470,9 @@ export default function App() {
               editorApplyY.setValue(0);
               transitionBgOpacity.setValue(1);
               transitionBgScale.setValue(1);
-              setSharedTransition({ uri: last.uri, start: last.start, closing: true });
-              setTab("Home");
+                setSharedTransition({ uri: last.uri, start: last.start, closing: true });
+                setTab("Home");
+              });
             }} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
             <Text style={s.editorTitle}>Edit wallpaper</Text>
             <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
@@ -446,10 +488,12 @@ export default function App() {
           </View>
           <View style={s.editorToolsHeader}><Text style={s.editorSectionTitle}>Tools</Text><Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text></View>
           <View style={s.editorTools}>
-            {editorTools.map(([name, icon]) => <Pressable key={name} accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
-              <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
-              <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
-            </Pressable>)}
+            {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
+              <Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+                <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
+                <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
+              </Pressable>
+            </Animated.View>)}
           </View>
         </View>
       );
