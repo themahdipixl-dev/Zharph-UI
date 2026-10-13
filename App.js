@@ -343,7 +343,7 @@ export default function App() {
       Animated.parallel([
         Animated.timing(editorWallpaperNameOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
         Animated.timing(editorWallpaperNameY, { toValue: -12, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true })
-      ])
+      ]),
       Animated.parallel([
         Animated.timing(editorTool0Opacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
         Animated.timing(editorTool0Y, { toValue: 12, duration: 220, easing, useNativeDriver: true })
@@ -408,7 +408,7 @@ export default function App() {
             Animated.parallel([
               Animated.timing(editorWallpaperNameOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
               Animated.timing(editorWallpaperNameY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
-            ])
+            ]),
             Animated.parallel([
               Animated.timing(editorTool0Opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
               Animated.timing(editorTool0Y, { toValue: 0, duration: 220, easing, useNativeDriver: true })
