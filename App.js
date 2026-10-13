@@ -442,7 +442,6 @@ export default function App() {
                 <Text style={s.previewDate}>MONDAY, OCTOBER 12</Text>
                 <Text style={[s.previewTime,{fontSize:Math.min(windowWidth*0.19,68),lineHeight:Math.min(windowWidth*0.2,72)}]}>9:41</Text>
               </View>
-              <View pointerEvents="none" style={s.previewBottomHint}><View style={s.previewHandle} /></View>
             </View>
           </View>
           <View style={s.editorToolsHeader}><Text style={s.editorSectionTitle}>Tools</Text><Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text></View>
