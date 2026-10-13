@@ -159,16 +159,8 @@ export default function App() {
     });
   }, [editorToolMotion, editorToolsHeaderMotion]);
   useEffect(() => {
-    if (tab !== "Editor" || editorToolsExitRunning.current) return;
-    if (sharedTransition && !sharedTransition.closing) {
-      const timer = setTimeout(() => {
-        if (!editorToolsExitRunning.current) runEditorToolsMotion(false);
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-    if (!sharedTransition && !lastEditorTransition.current) {
-      runEditorToolsMotion(false);
-    }
+    if (tab !== "Editor" || sharedTransition || editorToolsExitRunning.current) return;
+    runEditorToolsMotion(false);
   }, [tab, sharedTransition, runEditorToolsMotion]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [filterScrolledLeft, setFilterScrolledLeft] = useState(false);
