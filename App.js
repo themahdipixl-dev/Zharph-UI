@@ -60,10 +60,6 @@ export default function App() {
     NavigationBar.setButtonStyleAsync("dark").catch(() => {});
     NavigationBar.setBackgroundColorAsync("#F3EDF7").catch(() => {});
   }, []);
-
-  useEffect(() => {
-    NavigationBar.setVisibilityAsync(tab === "Editor" ? "hidden" : "visible").catch(() => {});
-  }, [tab]);
   const [tab, setTab] = useState("Home");
   const rootRef = useRef(null);
   const previewTargetRef = useRef(null);
