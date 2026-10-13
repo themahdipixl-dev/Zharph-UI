@@ -137,13 +137,13 @@ export default function App() {
         useNativeDriver: true
       }),
       Animated.timing(motion.translateY, {
-        toValue: closing ? -22 : 0,
+        toValue: closing ? 22 : 0,
         duration: 240,
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
       })
     ]));
-    Animated.stagger(27, closing ? animations.slice().reverse() : animations).start(({ finished }) => {
+    Animated.stagger(27, animations).start(({ finished }) => {
       if (finished && onDone) onDone();
     });
   };
