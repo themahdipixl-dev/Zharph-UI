@@ -81,6 +81,16 @@ export default function App() {
   const editorToolsTitleY = useRef(new Animated.Value(-12)).current;
   const editorWallpaperNameOpacity = useRef(new Animated.Value(0)).current;
   const editorWallpaperNameY = useRef(new Animated.Value(-12)).current;
+  const editorTool0Opacity = useRef(new Animated.Value(0)).current;
+  const editorTool0Y = useRef(new Animated.Value(12)).current;
+  const editorTool1Opacity = useRef(new Animated.Value(0)).current;
+  const editorTool1Y = useRef(new Animated.Value(12)).current;
+  const editorTool2Opacity = useRef(new Animated.Value(0)).current;
+  const editorTool2Y = useRef(new Animated.Value(12)).current;
+  const editorTool3Opacity = useRef(new Animated.Value(0)).current;
+  const editorTool3Y = useRef(new Animated.Value(12)).current;
+  const editorTool4Opacity = useRef(new Animated.Value(0)).current;
+  const editorTool4Y = useRef(new Animated.Value(12)).current;
   const transitionBgOpacity = useRef(new Animated.Value(0)).current;
   const transitionBgScale = useRef(new Animated.Value(1.04)).current;
   const openEditor = (wallpaper, cardRef) => {
@@ -113,6 +123,16 @@ export default function App() {
         editorToolsTitleY.setValue(-12);
         editorWallpaperNameOpacity.setValue(0);
         editorWallpaperNameY.setValue(-12);
+        editorTool0Opacity.setValue(0);
+        editorTool0Y.setValue(12);
+        editorTool1Opacity.setValue(0);
+        editorTool1Y.setValue(12);
+        editorTool2Opacity.setValue(0);
+        editorTool2Y.setValue(12);
+        editorTool3Opacity.setValue(0);
+        editorTool3Y.setValue(12);
+        editorTool4Opacity.setValue(0);
+        editorTool4Y.setValue(12);
         transitionBgOpacity.setValue(0);
         transitionBgScale.setValue(1.04);
         setTab("Editor");
@@ -324,6 +344,26 @@ export default function App() {
         Animated.timing(editorWallpaperNameOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
         Animated.timing(editorWallpaperNameY, { toValue: -12, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true })
       ])
+      Animated.parallel([
+        Animated.timing(editorTool0Opacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTool0Y, { toValue: 12, duration: 220, easing, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorTool1Opacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTool1Y, { toValue: 12, duration: 220, easing, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorTool2Opacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTool2Y, { toValue: 12, duration: 220, easing, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorTool3Opacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTool3Y, { toValue: 12, duration: 220, easing, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorTool4Opacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTool4Y, { toValue: 12, duration: 220, easing, useNativeDriver: true })
+      ])
     ]);
     if (sharedTransition.closing) {
       const start = sharedTransition.start;
@@ -369,6 +409,26 @@ export default function App() {
               Animated.timing(editorWallpaperNameOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
               Animated.timing(editorWallpaperNameY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
             ])
+            Animated.parallel([
+              Animated.timing(editorTool0Opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTool0Y, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorTool1Opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTool1Y, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorTool2Opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTool2Y, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorTool3Opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTool3Y, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorTool4Opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTool4Y, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ])
           ]);
           Animated.parallel([
             Animated.timing(transitionX, { toValue: target.x, duration: 420, easing, useNativeDriver: false }),
@@ -387,7 +447,7 @@ export default function App() {
         });
       });
     });
-  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth, editorBackOpacity, editorBackY, editorTitleOpacity, editorTitleY, editorApplyOpacity, editorApplyY, editorToolsTitleOpacity, editorToolsTitleY, editorWallpaperNameOpacity, editorWallpaperNameY]);
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth, editorBackOpacity, editorBackY, editorTitleOpacity, editorTitleY, editorApplyOpacity, editorApplyY, editorToolsTitleOpacity, editorToolsTitleY, editorWallpaperNameOpacity, editorWallpaperNameY, editorTool0Opacity, editorTool0Y, editorTool1Opacity, editorTool1Y, editorTool2Opacity, editorTool2Y, editorTool3Opacity, editorTool3Y, editorTool4Opacity, editorTool4Y]);
 
   const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
@@ -470,10 +530,10 @@ export default function App() {
           </View>
           <View style={s.editorToolsHeader}><Animated.Text style={[s.editorSectionTitle, { opacity: editorToolsTitleOpacity, transform: [{ translateY: editorToolsTitleY }] }]}>Tools</Animated.Text><Animated.Text style={[s.editorWallpaperName, { opacity: editorWallpaperNameOpacity, transform: [{ translateY: editorWallpaperNameY }] }]} numberOfLines={1}>{selectedWallpaper.title}</Animated.Text></View>
           <View style={s.editorTools}>
-            {editorTools.map(([name, icon]) => <Pressable key={name} accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+            {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ opacity: [editorTool0Opacity, editorTool1Opacity, editorTool2Opacity, editorTool3Opacity, editorTool4Opacity][index], transform: [{ translateY: [editorTool0Y, editorTool1Y, editorTool2Y, editorTool3Y, editorTool4Y][index] }] }}><Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
               <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
               <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
-            </Pressable>)}
+            </Pressable></Animated.View>)}
           </View>
         </View>
       );
