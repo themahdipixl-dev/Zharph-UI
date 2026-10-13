@@ -153,7 +153,7 @@ export default function App() {
     const entranceMotion = Animated.parallel([cards, headings]);
     const motion = closing
       ? entranceMotion
-      : Animated.sequence([Animated.delay(150), entranceMotion]);
+      : Animated.parallel([cards, Animated.sequence([Animated.delay(150), headings])]);
     motion.start(({ finished }) => {
       if (finished && onDone) onDone();
     });
