@@ -137,19 +137,19 @@ export default function App() {
     const makeMotion = (motion) => Animated.parallel([
       Animated.timing(motion.opacity, {
         toValue: closing ? 0 : 1,
-        duration: 210,
+        duration: closing ? 180 : 210,
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
       }),
       Animated.timing(motion.translateY, {
         toValue: closing ? 22 : 0,
-        duration: 240,
+        duration: closing ? 180 : 240,
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
       })
     ]);
-    const cards = Animated.stagger(27, editorToolMotion.map(makeMotion));
-    const headings = Animated.stagger(55, editorToolsHeaderMotion.map(makeMotion));
+    const cards = Animated.stagger(closing ? 35 : 27, editorToolMotion.map(makeMotion));
+    const headings = Animated.stagger(closing ? 35 : 55, editorToolsHeaderMotion.map(makeMotion));
     const entranceMotion = Animated.parallel([cards, headings]);
     const motion = closing
       ? entranceMotion
