@@ -493,7 +493,14 @@ export default function App() {
               </View>
             </View>
           </View>
-          <View style={s.editorToolsHeader}><Text style={s.editorSectionTitle}>Tools</Text><Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text></View>
+          <View style={s.editorToolsHeader}>
+            <Animated.View style={{ opacity: editorToolsHeaderMotion[0].opacity, transform: [{ translateY: editorToolsHeaderMotion[0].translateY }] }}>
+              <Text style={s.editorSectionTitle}>Tools</Text>
+            </Animated.View>
+            <Animated.View style={{ flexShrink: 1, minWidth: 0, opacity: editorToolsHeaderMotion[1].opacity, transform: [{ translateY: editorToolsHeaderMotion[1].translateY }] }}>
+              <Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text>
+            </Animated.View>
+          </View>
           <View style={s.editorTools}>
             {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, height: 68, alignItems: "stretch", opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
               <Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
