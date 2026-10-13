@@ -514,7 +514,7 @@ export default function App() {
           </Animated.View>
           <View style={{ position: "absolute", left: 20, right: 20, top: 8, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Animated.View style={{ width: 42, height: 42, alignItems: "flex-start", justifyContent: "center", opacity: editorBackOpacity, transform: [{ translateY: editorBackY }] }}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Animated.View>
-            <Animated.Text style={{ color: C.text, fontSize: 19, fontWeight: "700", flex: 1, marginLeft: 4, transform: [{ translateY: editorTitleY }], opacity: editorTitleOpacity }}>Edit wallpaper</Animated.Text>
+            <Animated.Text style={{ color: C.text, fontSize: 19, fontWeight: "700", flex: 1, marginLeft: 4, transform: [{ translateY: Animated.add(editorTitleY, -2) }], opacity: editorTitleOpacity }}>Edit wallpaper</Animated.Text>
             <Animated.View style={{ paddingHorizontal: 17, paddingVertical: 10, borderRadius: 20, backgroundColor: C.primary, opacity: editorApplyOpacity, transform: [{ translateY: editorApplyY }] }}><Text style={{ color: C.onPrimary, fontSize: 13, fontWeight: "700", transform: [{ translateY: -2 }] }}>Apply</Text></Animated.View>
           </View>
         </View>}
