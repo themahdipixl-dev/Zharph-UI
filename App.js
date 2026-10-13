@@ -159,7 +159,14 @@ export default function App() {
     });
   }, [editorToolMotion, editorToolsHeaderMotion]);
   useEffect(() => {
-    if (tab === "Editor" && !sharedTransition && !editorToolsExitRunning.current) {
+    if (tab !== "Editor" || editorToolsExitRunning.current) return;
+    if (sharedTransition && !sharedTransition.closing) {
+      const timer = setTimeout(() => {
+        if (!editorToolsExitRunning.current) runEditorToolsMotion(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+    if (!sharedTransition && !lastEditorTransition.current) {
       runEditorToolsMotion(false);
     }
   }, [tab, sharedTransition, runEditorToolsMotion]);
