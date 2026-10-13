@@ -530,7 +530,7 @@ export default function App() {
           </View>
           <View style={s.editorToolsHeader}><Animated.Text style={[s.editorSectionTitle, { opacity: editorToolsTitleOpacity, transform: [{ translateY: editorToolsTitleY }] }]}>Tools</Animated.Text><Animated.Text style={[s.editorWallpaperName, { opacity: editorWallpaperNameOpacity, transform: [{ translateY: editorWallpaperNameY }] }]} numberOfLines={1}>{selectedWallpaper.title}</Animated.Text></View>
           <View style={s.editorTools}>
-            {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ opacity: [editorTool0Opacity, editorTool1Opacity, editorTool2Opacity, editorTool3Opacity, editorTool4Opacity][index], transform: [{ translateY: [editorTool0Y, editorTool1Y, editorTool2Y, editorTool3Y, editorTool4Y][index] }] }}><Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+            {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, opacity: [editorTool0Opacity, editorTool1Opacity, editorTool2Opacity, editorTool3Opacity, editorTool4Opacity][index], transform: [{ translateY: [editorTool0Y, editorTool1Y, editorTool2Y, editorTool3Y, editorTool4Y][index] }] }}><Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
               <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
               <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
             </Pressable></Animated.View>)}
