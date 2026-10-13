@@ -71,6 +71,8 @@ export default function App() {
   const transitionH = useRef(new Animated.Value(0)).current;
   const transitionRadius = useRef(new Animated.Value(16)).current;
   const transitionBorderWidth = useRef(new Animated.Value(0)).current;
+  const editorHeaderOpacity = useRef(new Animated.Value(0)).current;
+  const editorHeaderY = useRef(new Animated.Value(12)).current;
   const transitionBgOpacity = useRef(new Animated.Value(0)).current;
   const transitionBgScale = useRef(new Animated.Value(1.04)).current;
   const openEditor = (wallpaper, cardRef) => {
@@ -93,6 +95,8 @@ export default function App() {
         transitionH.setValue(start.height);
         transitionRadius.setValue(16);
         transitionBorderWidth.setValue(0);
+        editorHeaderOpacity.setValue(0);
+        editorHeaderY.setValue(12);
         transitionBgOpacity.setValue(0);
         transitionBgScale.setValue(1.04);
         setTab("Editor");
@@ -292,6 +296,8 @@ export default function App() {
         Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionRadius, { toValue: 16, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionBorderWidth, { toValue: 0, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(editorHeaderOpacity, { toValue: 0, duration: 240, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorHeaderY, { toValue: -7, duration: 420, easing, useNativeDriver: true }),
         Animated.parallel([
           Animated.timing(transitionBgOpacity, { toValue: 0, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
           Animated.timing(transitionBgScale, { toValue: 1.04, duration: 300, easing, useNativeDriver: true })
@@ -312,13 +318,15 @@ export default function App() {
             Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionRadius, { toValue: 28, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionBorderWidth, { toValue: 1, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(editorHeaderOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(editorHeaderY, { toValue: 0, duration: 420, easing, useNativeDriver: true }),
             Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
             Animated.timing(transitionBgScale, { toValue: 1, duration: 300, easing, useNativeDriver: true })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
       });
     });
-  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth]);
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth, editorHeaderOpacity, editorHeaderY]);
 
   const [previousNavTab, setPreviousNavTab] = useState("Home");
   const [popupMounted, setPopupMounted] = useState(false);
@@ -376,6 +384,8 @@ export default function App() {
               transitionH.setValue(last.target.height);
               transitionRadius.setValue(28);
               transitionBorderWidth.setValue(1);
+              editorHeaderOpacity.setValue(1);
+              editorHeaderY.setValue(0);
               transitionBgOpacity.setValue(1);
               transitionBgScale.setValue(1);
               setSharedTransition({ uri: last.uri, start: last.start, closing: true });
@@ -457,6 +467,11 @@ export default function App() {
           <Animated.View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: C.bg, opacity: transitionBgOpacity, transform: [{ scale: transitionBgScale }] }} />
           <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: transitionRadius, borderWidth: transitionBorderWidth, borderColor: C.outline, overflow: "hidden", backgroundColor: C.surface2 }}>
             <Image source={{ uri: sharedTransition.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+          </Animated.View>
+          <Animated.View style={{ position: "absolute", left: 20, right: 20, top: 8, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", opacity: editorHeaderOpacity, transform: [{ translateY: editorHeaderY }] }}>
+            <View style={{ width: 42, height: 42, alignItems: "flex-start", justifyContent: "center" }}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></View>
+            <Text style={{ color: C.text, fontSize: 19, fontWeight: "700", flex: 1, marginLeft: 4, transform: [{ translateY: -2 }] }}>Edit wallpaper</Text>
+            <View style={{ paddingHorizontal: 17, paddingVertical: 10, borderRadius: 20, backgroundColor: C.primary }}><Text style={{ color: C.onPrimary, fontSize: 13, fontWeight: "700", transform: [{ translateY: -2 }] }}>Apply</Text></View>
           </Animated.View>
         </View>}
         {tab !== "Editor" && <Animated.View style={[s.bar, { transform: [{ translateY: navTranslateY }, { scale: navScale }] }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
