@@ -319,7 +319,7 @@ export default function App() {
         Animated.timing(transitionRadius, { toValue: 16, duration: 420, easing, useNativeDriver: false }),
         Animated.timing(transitionBorderWidth, { toValue: 0, duration: 420, easing, useNativeDriver: false }),
         Animated.sequence([
-          Animated.delay(300),
+          Animated.delay(240),
           headerExit
         ]),
         Animated.parallel([
@@ -357,7 +357,7 @@ export default function App() {
             Animated.timing(transitionRadius, { toValue: 28, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionBorderWidth, { toValue: 1, duration: 420, easing, useNativeDriver: false }),
             Animated.sequence([
-              Animated.delay(420),
+              Animated.delay(350),
               headerEnter
             ]),
             Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
