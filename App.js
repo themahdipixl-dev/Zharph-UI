@@ -444,7 +444,7 @@ export default function App() {
           </View>
         </View>
         {sharedTransition && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <Animated.View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: C.surface2, opacity: transitionBgOpacity, transform: [{ scale: transitionBgScale }] }} />
+          <Animated.View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: C.bg, opacity: transitionBgOpacity, transform: [{ scale: transitionBgScale }] }} />
           <Animated.View style={{ position: "absolute", left: transitionX, top: transitionY, width: transitionW, height: transitionH, borderRadius: 16, overflow: "hidden", backgroundColor: C.surface2 }}>
             <Image source={{ uri: sharedTransition.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
           </Animated.View>
