@@ -357,7 +357,7 @@ export default function App() {
             Animated.timing(transitionRadius, { toValue: 28, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionBorderWidth, { toValue: 1, duration: 420, easing, useNativeDriver: false }),
             Animated.sequence([
-              Animated.delay(350),
+              Animated.delay(300),
               headerEnter
             ]),
             Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
