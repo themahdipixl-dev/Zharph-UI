@@ -304,7 +304,7 @@ export default function App() {
             Animated.timing(transitionY, { toValue: target.y, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionW, { toValue: target.width, duration: 420, easing, useNativeDriver: false }),
             Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
-            Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
             Animated.timing(transitionBgScale, { toValue: 1, duration: 300, easing, useNativeDriver: true })
           ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
         });
