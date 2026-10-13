@@ -125,7 +125,8 @@ export default function App() {
   }))).current;
   const editorToolsExitRunning = useRef(false);
   const runEditorToolsMotion = useCallback((closing = false, onDone) => {
-    editorToolMotion.forEach((motion, index) => {
+    const allMotion = editorToolMotion.concat(editorToolsHeaderMotion);
+    allMotion.forEach((motion) => {
       motion.opacity.stopAnimation();
       motion.translateY.stopAnimation();
       if (!closing) {
@@ -133,7 +134,7 @@ export default function App() {
         motion.translateY.setValue(22);
       }
     });
-    const animations = editorToolMotion.map((motion) => Animated.parallel([
+    const makeMotion = (motion) => Animated.parallel([
       Animated.timing(motion.opacity, {
         toValue: closing ? 0 : 1,
         duration: 210,
@@ -146,11 +147,13 @@ export default function App() {
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
       })
-    ]));
-    Animated.stagger(27, animations).start(({ finished }) => {
+    ]);
+    const cards = Animated.stagger(27, editorToolMotion.map(makeMotion));
+    const headings = Animated.stagger(55, editorToolsHeaderMotion.map(makeMotion));
+    Animated.parallel([cards, headings]).start(({ finished }) => {
       if (finished && onDone) onDone();
     });
-  }, [editorToolMotion]);
+  }, [editorToolMotion, editorToolsHeaderMotion]);
   useEffect(() => {
     if (tab === "Editor" && !sharedTransition && !editorToolsExitRunning.current) {
       runEditorToolsMotion(false);
