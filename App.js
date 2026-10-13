@@ -333,6 +333,89 @@ export default function App() {
   }, [navTab, iconScales]);
   const [addPopupVisible, setAddPopupVisible] = useState(false);
   useEffect(() => {
+    if (!sharedTransition || !rootRef.current) return;
+    const easing = Easing.bezier(0.22, 1, 0.36, 1);
+    const headerExit = Animated.stagger(35, [
+      Animated.parallel([
+        Animated.timing(editorBackOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorBackY, { toValue: -12, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorTitleOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorTitleY, { toValue: -12, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(editorApplyOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(editorApplyY, { toValue: -12, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true })
+      ])
+    ]);
+    if (sharedTransition.closing) {
+      const start = sharedTransition.start;
+      Animated.parallel([
+        Animated.timing(transitionX, { toValue: start.x, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionY, { toValue: start.y, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionW, { toValue: start.width, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionH, { toValue: start.height, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionRadius, { toValue: 16, duration: 420, easing, useNativeDriver: false }),
+        Animated.timing(transitionBorderWidth, { toValue: 0, duration: 420, easing, useNativeDriver: false }),
+        headerExit,
+        buildEditorToolsMotion(true),
+        Animated.parallel([
+          Animated.timing(transitionBgOpacity, { toValue: 0, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(transitionBgScale, { toValue: 1.04, duration: 300, easing, useNativeDriver: true })
+        ])
+      ]).start(({ finished }) => { editorToolsExitRunning.current = false; if (finished) setSharedTransition(null); });
+      return;
+    }
+    if (tab !== "Editor" || !previewTargetRef.current) return;
+    requestAnimationFrame(() => {
+      previewTargetRef.current?.measureInWindow((targetX, targetY, targetW, targetH) => {
+        rootRef.current?.measureInWindow((rootX, rootY) => {
+          const target = { x: targetX - rootX, y: targetY - rootY, width: targetW, height: targetH };
+          if (lastEditorTransition.current) lastEditorTransition.current.target = target;
+          const headerEnter = Animated.stagger(55, [
+            Animated.parallel([
+              Animated.timing(editorBackOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorBackY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorTitleOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorTitleY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ]),
+            Animated.parallel([
+              Animated.timing(editorApplyOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+              Animated.timing(editorApplyY, { toValue: 0, duration: 220, easing, useNativeDriver: true })
+            ])
+          ]);
+          Animated.parallel([
+            Animated.timing(transitionX, { toValue: target.x, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionY, { toValue: target.y, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionW, { toValue: target.width, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionH, { toValue: target.height, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionRadius, { toValue: 28, duration: 420, easing, useNativeDriver: false }),
+            Animated.timing(transitionBorderWidth, { toValue: 1, duration: 420, easing, useNativeDriver: false }),
+            Animated.sequence([
+              Animated.delay(150),
+              Animated.parallel([
+                headerEnter,
+                buildEditorToolsMotion(false)
+              ])
+            ]),
+            Animated.timing(transitionBgOpacity, { toValue: 1, duration: 300, easing: Easing.linear, useNativeDriver: true }),
+            Animated.timing(transitionBgScale, { toValue: 1, duration: 300, easing, useNativeDriver: true })
+          ]).start(({ finished }) => { if (finished) setSharedTransition(null); });
+        });
+      });
+    });
+  }, [tab, sharedTransition, transitionX, transitionY, transitionW, transitionH, transitionBgOpacity, transitionBgScale, transitionRadius, transitionBorderWidth, editorBackOpacity, editorBackY, editorTitleOpacity, editorTitleY, editorApplyOpacity, editorApplyY, buildEditorToolsMotion]);
+
+  const [previousNavTab, setPreviousNavTab] = useState("Home");
+  const [popupMounted, setPopupMounted] = useState(false);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const popupProgress = useRef(new Animated.Value(0)).current;
+  const popupOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
     addIconRotation.stopAnimation();
     Animated.timing(addIconRotation, {
       toValue: addPopupVisible ? 1 : 0,
