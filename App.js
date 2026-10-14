@@ -568,10 +568,12 @@ export default function App() {
           </View>
           <View style={s.editorTools}>
             {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, height: 68, alignItems: "stretch", opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
-              <Pressable accessibilityRole="button" onPress={() => animateEditorToolPress(index, name)} style={[s.editorTool, { transform: [{ scale: editorToolPressScale[index] }] }, activeEditorTool === name && s.editorToolActive]}>
-                <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
-                <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
-              </Pressable>
+              <Animated.View style={{ transform: [{ scale: editorToolPressScale[index] }] }}>
+                <Pressable accessibilityRole="button" onPress={() => animateEditorToolPress(index, name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+                  <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
+                  <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
+                </Pressable>
+              </Animated.View>
             </Animated.View>)}
           </View>
         </View>
