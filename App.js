@@ -132,10 +132,23 @@ export default function App() {
   const homeScrollY = useRef(0);
   const [selectedWallpaper, setSelectedWallpaper] = useState({ title: items[0][0], uri: items[0][1] });
   const [activeEditorTool, setActiveEditorTool] = useState(null);
+  const editorToolPressScale = useRef(Array.from({ length: 5 }, () => new Animated.Value(1))).current;
   const editorToolMotion = useRef(Array.from({ length: 5 }, () => ({
     opacity: new Animated.Value(0),
     translateY: new Animated.Value(22)
   }))).current;
+  const animateEditorToolPress = (index, name) => {
+    setActiveEditorTool(name);
+    const scale = editorToolPressScale[index];
+    scale.stopAnimation();
+    scale.setValue(0.92);
+    Animated.spring(scale, {
+      toValue: 1,
+      speed: 24,
+      bounciness: 7,
+      useNativeDriver: true
+    }).start();
+  };
   const editorToolsHeaderMotion = useRef(Array.from({ length: 2 }, () => ({
     opacity: new Animated.Value(0),
     translateY: new Animated.Value(22)
@@ -555,7 +568,7 @@ export default function App() {
           </View>
           <View style={s.editorTools}>
             {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, height: 68, alignItems: "stretch", opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
-              <Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+              <Pressable accessibilityRole="button" onPress={() => animateEditorToolPress(index, name)} style={[s.editorTool, { transform: [{ scale: editorToolPressScale[index] }] }, activeEditorTool === name && s.editorToolActive]}>
                 <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
                 <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
               </Pressable>
