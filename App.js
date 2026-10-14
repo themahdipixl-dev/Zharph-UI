@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing, useWindowDimensions, BackHandler } from "react-native";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing, useWindowDimensions, BackHandler, PanResponder } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
@@ -39,6 +39,8 @@ const tabs = [
   ["Add", "add"], ["Saved", "bookmark"], ["Settings", "settings"]
 ];
 
+const TOOL_NAMES = ["Depth", "Crop", "Clock", "Parallax", "Effects"];
+
 function findTouch(touches, identifier) {
   if (!touches) return null;
   for (let i = 0; i < touches.length; i++) {
@@ -50,6 +52,18 @@ function findTouch(touches, identifier) {
 function GoogleSymbol({ name, size = 24, color, filled = false, style }) {
   const opticalOffset = name === "home" ? { transform: [{ translateX: 1.2 }, { translateY: -1 }] } : null;
   return <Text accessibilityLabel={name} style={[{ width: size, height: size, fontFamily: "MaterialSymbolsRounded_400Regular", fontSize: size, lineHeight: size, color, textAlign: "center", textAlignVertical: "center", includeFontPadding: false, padding: 0, margin: 0 }, opticalOffset, style]}>{name}</Text>;
+}
+
+// One tool card drawn only from transforms (top cap + stretchable middle + bottom cap),
+// so its height can shrink on the native thread without touching layout.
+function ToolCardShape({ bg, border, capHeight, radius, topY, midHeight, midScale, midY, bottomCapTop, capY }) {
+  return (
+    <>
+      <View style={{ position: "absolute", left: 0, right: 0, top: 0, height: capHeight, backgroundColor: bg, borderColor: border, borderWidth: 1, borderBottomWidth: 0, borderTopLeftRadius: radius, borderTopRightRadius: radius }} />
+      <Animated.View style={{ position: "absolute", left: 0, right: 0, top: topY, height: midHeight, backgroundColor: bg, borderColor: border, borderLeftWidth: 1, borderRightWidth: 1, transform: [{ translateY: midY }, { scaleY: midScale }] }} />
+      <Animated.View style={{ position: "absolute", left: 0, right: 0, top: bottomCapTop, height: capHeight, backgroundColor: bg, borderColor: border, borderWidth: 1, borderTopWidth: 0, borderBottomLeftRadius: radius, borderBottomRightRadius: radius, transform: [{ translateY: capY }] }} />
+    </>
+  );
 }
 
 export default function App() {
@@ -80,6 +94,8 @@ export default function App() {
   const transitionBgOpacity = useRef(new Animated.Value(0)).current;
   const transitionBgScale = useRef(new Animated.Value(1.04)).current;
   const openEditor = (wallpaper, cardRef) => {
+    sheetProgress.setValue(0);
+    sheetOpenRef.current = false;
     if (!cardRef?.current || !rootRef.current) {
       setSelectedWallpaper(wallpaper);
       setActiveEditorTool(null);
@@ -245,6 +261,83 @@ export default function App() {
       : Animated.parallel([cards, Animated.sequence([Animated.delay(150), headings])]);
   }, [editorToolMotion, editorToolsHeaderMotion]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // ---- Bottom sheet (editor tools) ----
+  // One progress value (0 = closed, 1 = open) drives the sheet, the tool cards and the icons,
+  // so everything stays perfectly in sync. Everything is transform/opacity only, so it runs entirely on the native thread (60fps, no JS per frame).
+  const SHEET_H = Math.round(windowHeight / 3);
+  const TOOL_H = 68;          // card height when closed
+  const TOOL_H_MIN = 32;      // card height inside the sheet
+  const TOOLS_BOTTOM = 12;    // distance of the cards from the bottom when closed
+  const HANDLE_ZONE = 28;     // space above the cards inside the sheet (holds the grab handle)
+  const sheetProgress = useRef(new Animated.Value(0)).current;
+  const [editorLayout, setEditorLayout] = useState({ pageH: 0, stageY: 0, stageH: 0 });
+  const sheetOpenRef = useRef(false);
+  const sheetHRef = useRef(SHEET_H);
+  sheetHRef.current = SHEET_H;
+  const openSheet = useCallback(() => {
+    sheetOpenRef.current = true;
+    sheetProgress.stopAnimation();
+    Animated.timing(sheetProgress, { toValue: 1, duration: 380, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: true }).start();
+  }, [sheetProgress]);
+  const closeSheet = useCallback(() => {
+    sheetOpenRef.current = false;
+    setActiveEditorTool(null); // the selected card's color fades out (see the effect below) while the sheet closes
+    sheetProgress.stopAnimation();
+    Animated.timing(sheetProgress, { toValue: 0, duration: 300, easing: Easing.bezier(0.3, 0, 0.2, 1), useNativeDriver: true }).start();
+  }, [sheetProgress]);
+  const sheetPan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => sheetProgress.stopAnimation(),
+    onPanResponderMove: (_, g) => sheetProgress.setValue(Math.max(0, Math.min(1, 1 - g.dy / sheetHRef.current))),
+    onPanResponderRelease: (_, g) => {
+      const tap = Math.abs(g.dy) < 5 && Math.abs(g.dx) < 5;
+      if (tap || g.dy > sheetHRef.current * 0.25 || g.vy > 0.7) closeSheet();
+      else openSheet();
+    },
+    onPanResponderTerminate: () => openSheet()
+  })).current;
+  const sheetY = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [SHEET_H, 0], extrapolate: "clamp" });
+  // The sheet's top edge rises at SHEET_H * progress. The cards first rise a bit behind it, then ride just under its top edge.
+  const toolsTop0 = TOOLS_BOTTOM + TOOL_H;
+  const toolsP0 = Math.min(0.6, toolsTop0 / SHEET_H);
+  const toolsTopAt = (p) => {
+    const end = SHEET_H - HANDLE_ZONE;
+    return p <= toolsP0 ? toolsTop0 : toolsTop0 + (end - toolsTop0) * (p - toolsP0) / (1 - toolsP0);
+  };
+  // sample + box-filter the path so the cards never change speed abruptly
+  const TOOLS_STEPS = 30;
+  const toolsInput = [], toolsOutput = [];
+  for (let i = 0; i <= TOOLS_STEPS; i++) {
+    const p = i / TOOLS_STEPS;
+    let sum = 0;
+    for (let k = -3; k <= 3; k++) sum += toolsTopAt(p + k / TOOLS_STEPS);
+    toolsInput.push(p);
+    toolsOutput.push(-(sum / 7 - toolsTop0));
+  }
+  const toolsTranslateY = sheetProgress.interpolate({ inputRange: toolsInput, outputRange: toolsOutput, extrapolate: "clamp" });
+  // card shrinking (transform-only): bottom cap moves up, middle part squashes
+  const CARD_CAP = Math.floor(TOOL_H_MIN / 2);
+  const CARD_SHRINK = TOOL_H - TOOL_H_MIN;
+  const CARD_MID_H = TOOL_H - 2 * CARD_CAP + 2;
+  const cardCapY = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -CARD_SHRINK], extrapolate: "clamp" });
+  const cardMidScale = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 1 - CARD_SHRINK / CARD_MID_H], extrapolate: "clamp" });
+  const cardMidY = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -CARD_SHRINK / 2], extrapolate: "clamp" });
+  const LABEL_H = 14;
+  const LABEL_LIFT = 1.5;     // small optical lift so the label looks centered in the short card
+  const toolIconOpacity = sheetProgress.interpolate({ inputRange: [0, 0.6], outputRange: [1, 0], extrapolate: "clamp" });
+  const toolsHeaderOpacity = sheetProgress.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: "clamp" });
+  // per-card "selected" fade (color of the selected card fades in/out instead of switching instantly)
+  const toolActiveAnim = useRef(TOOL_NAMES.map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    TOOL_NAMES.forEach((name, i) => {
+      const on = activeEditorTool === name;
+      toolActiveAnim[i].stopAnimation();
+      Animated.timing(toolActiveAnim[i], { toValue: on ? 1 : 0, duration: on ? 160 : 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    });
+  }, [activeEditorTool, toolActiveAnim]);
   const [filterScrolledLeft, setFilterScrolledLeft] = useState(false);
   const filterFadeOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -538,6 +631,7 @@ export default function App() {
   const [gridColumns, setGridColumns] = useState(2);
   const [userImages, setUserImages] = useState([]);
   const handleEditorBack = () => {
+    if (sheetOpenRef.current) { closeSheet(); return; }
     if (editorToolsExitRunning.current) return;
     const last = lastEditorTransition.current;
     if (!last?.target) {
@@ -661,16 +755,23 @@ export default function App() {
     if (pageTab === "Editor") {
       const previewWidth = Math.max(160, Math.min(windowWidth - 44, 315, (windowHeight - 255) * 9 / 19.5));
       const previewHeight = previewWidth * 19.5 / 9;
+      // Fit the preview into the space left above the sheet (scaled around its center, then moved to the middle of that space)
+      const { pageH, stageY, stageH } = editorLayout;
+      const fitTop = stageY + 8, fitBottom = pageH - SHEET_H - 14;
+      const previewFit = pageH > 0 ? Math.max(0.4, Math.min(1, (fitBottom - fitTop) / previewHeight)) : 0.7;
+      const previewShift = pageH > 0 ? (fitTop + fitBottom) / 2 - (stageY + stageH / 2) : 0;
+      const previewScale = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [1, previewFit], extrapolate: "clamp" });
+      const previewTranslateY = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [0, previewShift], extrapolate: "clamp" });
       const editorTools = [["Depth", "layers"], ["Crop", "crop"], ["Clock", "schedule"], ["Parallax", "3d_rotation"], ["Effects", "auto_awesome"]];
       return (
-        <View style={[s.editorPage, { backgroundColor: sharedTransition ? "transparent" : C.bg }]}>
+        <View onLayout={e => { const h = e.nativeEvent.layout.height; setEditorLayout(l => l.pageH === h ? l : { ...l, pageH: h }); }} style={[s.editorPage, { backgroundColor: sharedTransition ? "transparent" : C.bg }]}>
           <View style={[s.editorHeader, sharedTransition && { opacity: 0 }]}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={handleEditorBack} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
             <Text style={s.editorTitle}>Edit wallpaper</Text>
             <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
           </View>
-          <View style={s.previewStage}>
-            <View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, backgroundColor: sharedTransition ? "transparent" : C.surface2, borderColor: sharedTransition ? "transparent" : C.outline }]}>
+          <View onLayout={e => { const { y, height } = e.nativeEvent.layout; setEditorLayout(l => (l.stageY === y && l.stageH === height) ? l : { ...l, stageY: y, stageH: height }); }} style={s.previewStage}>
+            <Animated.View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, backgroundColor: sharedTransition ? "transparent" : C.surface2, borderColor: sharedTransition ? "transparent" : C.outline, transform: [{ translateY: previewTranslateY }, { scale: previewScale }] }]}>
               <Image source={{ uri: selectedWallpaper.uri }} style={[s.previewImage, { opacity: sharedTransition ? 0 : 1 }]} resizeMode="cover" />
               <Animated.View pointerEvents="none" style={[s.previewClock, {
                 opacity: clockOpacity,
@@ -679,26 +780,78 @@ export default function App() {
                 <Text style={s.previewDate}>MONDAY, OCTOBER 12</Text>
                 <Text style={[s.previewTime,{fontSize:Math.min(windowWidth*0.19,68),lineHeight:Math.min(windowWidth*0.2,72)}]}>9:41</Text>
               </Animated.View>
-            </View>
-          </View>
-          <View style={s.editorToolsHeader}>
-            <Animated.View style={{ opacity: editorToolsHeaderMotion[0].opacity, transform: [{ translateY: editorToolsHeaderMotion[0].translateY }] }}>
-              <Text style={s.editorSectionTitle}>Tools</Text>
-            </Animated.View>
-            <Animated.View style={{ flexShrink: 1, minWidth: 0, opacity: editorToolsHeaderMotion[1].opacity, transform: [{ translateY: editorToolsHeaderMotion[1].translateY }] }}>
-              <Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text>
             </Animated.View>
           </View>
-          <View style={s.editorTools}>
-            {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, height: 68, alignItems: "stretch", opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
-              <Animated.View style={{ opacity: editorToolPressOpacity[index], transform: [{ scale: editorToolPressScale[index] }] }}>
-                <Pressable accessibilityRole="button" onPress={() => setActiveEditorTool(name)} onPressIn={() => animateEditorToolPressIn(index)} onPressOut={() => animateEditorToolPressOut(index)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
-                  <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
-                  <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
-                </Pressable>
+          <Animated.View pointerEvents="none" style={{ opacity: toolsHeaderOpacity }}>
+            <View style={s.editorToolsHeader}>
+              <Animated.View style={{ opacity: editorToolsHeaderMotion[0].opacity, transform: [{ translateY: editorToolsHeaderMotion[0].translateY }] }}>
+                <Text style={s.editorSectionTitle}>Tools</Text>
               </Animated.View>
-            </Animated.View>)}
+              <Animated.View style={{ flexShrink: 1, minWidth: 0, opacity: editorToolsHeaderMotion[1].opacity, transform: [{ translateY: editorToolsHeaderMotion[1].translateY }] }}>
+                <Text style={s.editorWallpaperName} numberOfLines={1}>{selectedWallpaper.title}</Text>
+              </Animated.View>
+            </View>
+          </Animated.View>
+          {/* keeps the layout space the tool cards occupy while closed (the cards themselves are absolutely positioned) */}
+          <View style={{ height: TOOL_H }} />
+          <View pointerEvents="box-none" style={s.sheetClip}>
+            <Animated.View style={[s.sheet, { height: SHEET_H, bottom: 0, transform: [{ translateY: sheetY }] }]}>
+              <View {...sheetPan.panHandlers} style={s.sheetHandleZone}>
+                <View style={s.sheetHandle} />
+              </View>
+              {/* sheet content for the active tool goes here */}
+            </Animated.View>
           </View>
+          <Animated.View style={[s.editorTools, s.editorToolsFloating, { transform: [{ translateY: toolsTranslateY }] }]}>
+            {editorTools.map(([name, icon], index) => {
+              const active = activeEditorTool === name;
+              const iconSize = name === "Depth" ? 28 : 26;
+              const iconTop = (TOOL_H - (iconSize + 5 + LABEL_H)) / 2;
+              const labelTop = iconTop + iconSize + 5;
+              const labelFinalTop = (TOOL_H_MIN - LABEL_H) / 2 - LABEL_LIFT;
+              const labelY = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [0, labelFinalTop - labelTop], extrapolate: "clamp" });
+              const a = toolActiveAnim[index];
+              const aInv = a.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+              const fill = StyleSheet.absoluteFillObject;
+              const shapeProps = { capHeight: CARD_CAP, radius: Math.min(15, CARD_CAP), topY: CARD_CAP - 1, midHeight: CARD_MID_H, midScale: cardMidScale, midY: cardMidY, bottomCapTop: TOOL_H - CARD_CAP, capY: cardCapY };
+              const content = (iconColor, labelColor) => (
+                <>
+                  <Animated.View style={{ position: "absolute", left: 0, right: 0, top: iconTop, alignItems: "center", opacity: toolIconOpacity }}>
+                    <GoogleSymbol name={icon} size={iconSize} color={iconColor} />
+                  </Animated.View>
+                  <Animated.View style={{ position: "absolute", left: 0, right: 0, top: labelTop, height: LABEL_H, alignItems: "center", justifyContent: "center", transform: [{ translateY: labelY }] }}>
+                    <Text style={{ color: labelColor, fontSize: 10, fontWeight: "600", lineHeight: LABEL_H, includeFontPadding: false, textAlignVertical: "center" }}>{name}</Text>
+                  </Animated.View>
+                </>
+              );
+              return (
+                <Animated.View key={name} style={{ flex: 1, minWidth: 0, opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
+                  <Animated.View style={{ opacity: editorToolPressOpacity[index], transform: [{ scale: editorToolPressScale[index] }] }}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={(e) => {
+                        // while the sheet is open the card is shorter than its touch area: ignore taps below it
+                        if (sheetOpenRef.current && (e?.nativeEvent?.locationY ?? 0) > TOOL_H_MIN) return;
+                        if (sheetOpenRef.current && active) { closeSheet(); return; }
+                        setActiveEditorTool(name);
+                        if (!sheetOpenRef.current) openSheet();
+                      }}
+                      onPressIn={() => animateEditorToolPressIn(index)}
+                      onPressOut={() => animateEditorToolPressOut(index)}
+                      style={{ width: "100%", height: TOOL_H }}
+                    >
+                      <ToolCardShape bg={C.surface} border={C.outline} {...shapeProps} />
+                      <Animated.View pointerEvents="none" style={[fill, { opacity: a }]}>
+                        <ToolCardShape bg={C.primary} border={C.primary} {...shapeProps} />
+                      </Animated.View>
+                      <Animated.View pointerEvents="none" style={[fill, { opacity: aInv }]}>{content(C.text, C.muted)}</Animated.View>
+                      <Animated.View pointerEvents="none" style={[fill, { opacity: a }]}>{content(C.onPrimary, C.onPrimary)}</Animated.View>
+                    </Pressable>
+                  </Animated.View>
+                </Animated.View>
+              );
+            })}
+          </Animated.View>
         </View>
       );
     }
@@ -830,6 +983,6 @@ const s=StyleSheet.create({
  stickyFilters:{position:"relative",flexDirection:"row",alignItems:"center",backgroundColor:C.bg,paddingTop:2,paddingBottom:8,marginTop:-12,marginHorizontal:-20,paddingHorizontal:20,paddingRight:45,gap:8,zIndex:2,elevation:2},stickyFilterBackdrop:{position:"absolute",left:"100%",top:0,bottom:0,width:0,backgroundColor:C.bg,zIndex:1},
  stickyFilterIcon:{position:"absolute",right:-33,top:2,width:42,height:42,alignItems:"center",justifyContent:"center",zIndex:2,transform:[{translateX:3},{translateY:-4}]},filterFade:{position:"absolute",right:0,top:0,bottom:0,width:10,zIndex:1},filterFadeLeft:{position:"absolute",left:0,top:0,bottom:0,width:10,zIndex:1},filterScroller:{flex:1,minWidth:0},filters:{gap:8,paddingBottom:8,paddingRight:15},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"flex-start",columnGap:"3.8%",rowGap:14},gridTwoColumns:{columnGap:0,justifyContent:"space-between"},card:{width:"30.8%",marginBottom:2},cardTwoColumns:{width:"48%"},photo:{width:"100%",aspectRatio:0.5,borderRadius:16,backgroundColor:C.surface2},
-editorPage:{flex:1,backgroundColor:"transparent",paddingHorizontal:20,paddingTop:8,paddingBottom:12},editorHeader:{height:48,flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:4},editorBack:{width:42,height:42,alignItems:"flex-start",justifyContent:"center"},editorTitle:{color:C.text,fontSize:19,fontWeight:"700",flex:1,marginLeft:4,transform:[{translateY:-2}]},applyButton:{paddingHorizontal:17,paddingVertical:10,borderRadius:20,backgroundColor:C.primary},applyText:{color:C.onPrimary,fontSize:13,fontWeight:"700",transform:[{translateY:-2}]},previewStage:{flex:1,minHeight:0,alignItems:"center",justifyContent:"center",paddingVertical:8},phonePreview:{borderRadius:28,overflow:"hidden",backgroundColor:C.surface2,borderWidth:1,borderColor:C.outline,elevation:0,shadowOpacity:0,shadowRadius:0,shadowOffset:{width:0,height:0}},previewImage:{...StyleSheet.absoluteFillObject,width:"100%",height:"100%"},previewClock:{position:"absolute",top:"17%",left:0,right:0,alignItems:"center"},previewDate:{color:"rgba(255,255,255,0.9)",fontSize:9,fontWeight:"700",letterSpacing:1.4,marginBottom:6},previewTime:{color:"#FFFFFF",fontSize:68,fontWeight:"300",letterSpacing:-3,lineHeight:72},editorToolsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginTop:8,marginBottom:12},editorSectionTitle:{color:C.text,fontSize:17,fontWeight:"700"},editorWallpaperName:{color:C.muted,fontSize:12,flexShrink:1,marginLeft:12},editorTools:{flexDirection:"row",justifyContent:"space-between",gap:6},editorTool:{width:"100%",height:68,flexGrow:0,flexShrink:0,minWidth:0,borderRadius:15,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline,alignItems:"center",justifyContent:"center",gap:5},editorToolActive:{backgroundColor:C.primary,borderColor:C.primary},editorToolLabel:{color:C.muted,fontSize:10,fontWeight:"600"},editorToolLabelActive:{color:C.onPrimary},popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,overflow:"hidden"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},exitHint:{position:"absolute",alignSelf:"center",bottom:94,zIndex:6,backgroundColor:C.surface2,borderRadius:24,paddingHorizontal:18,paddingVertical:12,borderWidth:1,borderColor:C.outline,elevation:6},exitHintText:{color:C.text,fontSize:13,fontWeight:"600"},bar:{position:"absolute",left:16,right:16,bottom:8,zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
+editorPage:{flex:1,backgroundColor:"transparent",paddingHorizontal:20,paddingTop:8,paddingBottom:12},editorHeader:{height:48,flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:4},editorBack:{width:42,height:42,alignItems:"flex-start",justifyContent:"center"},editorTitle:{color:C.text,fontSize:19,fontWeight:"700",flex:1,marginLeft:4,transform:[{translateY:-2}]},applyButton:{paddingHorizontal:17,paddingVertical:10,borderRadius:20,backgroundColor:C.primary},applyText:{color:C.onPrimary,fontSize:13,fontWeight:"700",transform:[{translateY:-2}]},previewStage:{flex:1,minHeight:0,alignItems:"center",justifyContent:"center",paddingVertical:8},phonePreview:{borderRadius:28,overflow:"hidden",backgroundColor:C.surface2,borderWidth:1,borderColor:C.outline,elevation:0,shadowOpacity:0,shadowRadius:0,shadowOffset:{width:0,height:0}},previewImage:{...StyleSheet.absoluteFillObject,width:"100%",height:"100%"},previewClock:{position:"absolute",top:"17%",left:0,right:0,alignItems:"center"},previewDate:{color:"rgba(255,255,255,0.9)",fontSize:9,fontWeight:"700",letterSpacing:1.4,marginBottom:6},previewTime:{color:"#FFFFFF",fontSize:68,fontWeight:"300",letterSpacing:-3,lineHeight:72},editorToolsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginTop:8,marginBottom:12},editorSectionTitle:{color:C.text,fontSize:17,fontWeight:"700"},editorWallpaperName:{color:C.muted,fontSize:12,flexShrink:1,marginLeft:12},editorTools:{flexDirection:"row",justifyContent:"space-between",gap:6},editorToolsFloating:{position:"absolute",left:20,right:20,bottom:12,height:68,zIndex:2},sheetClip:{...StyleSheet.absoluteFillObject,overflow:"hidden",zIndex:1},sheet:{position:"absolute",left:0,right:0,backgroundColor:C.surface2,borderTopLeftRadius:28,borderTopRightRadius:28,borderTopWidth:1,borderLeftWidth:1,borderRightWidth:1,borderColor:C.outline},sheetHandleZone:{height:28,alignItems:"center",paddingTop:10},sheetHandle:{width:36,height:4,borderRadius:2,backgroundColor:C.muted,opacity:0.5},popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,overflow:"hidden"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},exitHint:{position:"absolute",alignSelf:"center",bottom:94,zIndex:6,backgroundColor:C.surface2,borderRadius:24,paddingHorizontal:18,paddingVertical:12,borderWidth:1,borderColor:C.outline,elevation:6},exitHintText:{color:C.text,fontSize:13,fontWeight:"600"},bar:{position:"absolute",left:16,right:16,bottom:8,zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
