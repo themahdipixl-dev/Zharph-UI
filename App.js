@@ -534,8 +534,8 @@ export default function App() {
             <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
           </View>
           <View style={s.previewStage}>
-            <View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, opacity: sharedTransition ? 0 : 1 }]}>
-              <Image source={{ uri: selectedWallpaper.uri }} style={s.previewImage} resizeMode="cover" />
+            <View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, backgroundColor: sharedTransition ? "transparent" : C.surface2, borderColor: sharedTransition ? "transparent" : C.outline }]}>
+              <Image source={{ uri: selectedWallpaper.uri }} style={[s.previewImage, { opacity: sharedTransition ? 0 : 1 }]} resizeMode="cover" />
               <Animated.View pointerEvents="none" style={[s.previewClock, {
                 opacity: clockOpacity,
                 transform: [{ translateY: clockTranslateY }, { scale: clockScale }]
