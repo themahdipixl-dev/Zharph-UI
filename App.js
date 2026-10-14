@@ -82,7 +82,7 @@ export default function App() {
   const openEditor = (wallpaper, cardRef) => {
     if (!cardRef?.current || !rootRef.current) {
       setSelectedWallpaper(wallpaper);
-      setActiveEditorTool("Depth");
+      setActiveEditorTool(null);
       setTab("Editor");
       clockOpacity.setValue(0);
       clockTranslateY.setValue(14);
@@ -99,7 +99,7 @@ export default function App() {
       rootRef.current?.measureInWindow((rootX, rootY) => {
         const start = { x: cardX - rootX, y: cardY - rootY, width: cardW, height: cardH };
         setSelectedWallpaper(wallpaper);
-        setActiveEditorTool("Depth");
+        setActiveEditorTool(null);
         lastEditorTransition.current = { uri: wallpaper.uri, start, target: null };
         setSharedTransition({ uri: wallpaper.uri, start, closing: false });
         transitionX.setValue(start.x);
@@ -131,7 +131,7 @@ export default function App() {
   const homeScrollRef = useRef(null);
   const homeScrollY = useRef(0);
   const [selectedWallpaper, setSelectedWallpaper] = useState({ title: items[0][0], uri: items[0][1] });
-  const [activeEditorTool, setActiveEditorTool] = useState("Depth");
+  const [activeEditorTool, setActiveEditorTool] = useState(null);
   const editorToolMotion = useRef(Array.from({ length: 5 }, () => ({
     opacity: new Animated.Value(0),
     translateY: new Animated.Value(22)
