@@ -138,14 +138,32 @@ export default function App() {
     opacity: new Animated.Value(0),
     translateY: new Animated.Value(22)
   }))).current;
-  const animateEditorToolPress = (index, name) => {
+  const animateEditorToolPressIn = (index) => {
+    const scale = editorToolPressScale[index];
+    const opacity = editorToolPressOpacity[index];
+    scale.stopAnimation();
+    opacity.stopAnimation();
+    Animated.parallel([
+      Animated.timing(scale, {
+        toValue: 0.86,
+        duration: 90,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }),
+      Animated.timing(opacity, {
+        toValue: 0.68,
+        duration: 90,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      })
+    ]).start();
+  };
+  const animateEditorToolPressOut = (index, name) => {
     setActiveEditorTool(name);
     const scale = editorToolPressScale[index];
     const opacity = editorToolPressOpacity[index];
     scale.stopAnimation();
     opacity.stopAnimation();
-    scale.setValue(0.86);
-    opacity.setValue(0.68);
     Animated.parallel([
       Animated.spring(scale, {
         toValue: 1,
@@ -581,7 +599,7 @@ export default function App() {
           <View style={s.editorTools}>
             {editorTools.map(([name, icon], index) => <Animated.View key={name} style={{ flex: 1, minWidth: 0, height: 68, alignItems: "stretch", opacity: editorToolMotion[index].opacity, transform: [{ translateY: editorToolMotion[index].translateY }] }}>
               <Animated.View style={{ opacity: editorToolPressOpacity[index], transform: [{ scale: editorToolPressScale[index] }] }}>
-                <Pressable accessibilityRole="button" onPress={() => animateEditorToolPress(index, name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
+                <Pressable accessibilityRole="button" onPressIn={() => animateEditorToolPressIn(index)} onPressOut={() => animateEditorToolPressOut(index, name)} style={[s.editorTool, activeEditorTool === name && s.editorToolActive]}>
                   <GoogleSymbol name={icon} size={name === "Depth" ? 28 : 26} color={activeEditorTool === name ? C.onPrimary : C.text} />
                   <Text style={[s.editorToolLabel, activeEditorTool === name && s.editorToolLabelActive]}>{name}</Text>
                 </Pressable>
