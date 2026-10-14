@@ -39,7 +39,7 @@ const tabs = [
   ["Add", "add"], ["Saved", "bookmark"], ["Settings", "settings"]
 ];
 
-const TOOL_NAMES = ["Depth", "Crop", "Clock", "Parallax", "Effects"];
+const TOOL_NAMES = ["Depth", "Adjust", "Clock", "Parallax", "Effects"];
 
 function findTouch(touches, identifier) {
   if (!touches) return null;
@@ -762,7 +762,7 @@ export default function App() {
       const previewShift = pageH > 0 ? (fitTop + fitBottom) / 2 - (stageY + stageH / 2) : 0;
       const previewScale = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [1, previewFit], extrapolate: "clamp" });
       const previewTranslateY = sheetProgress.interpolate({ inputRange: [0, 1], outputRange: [0, previewShift], extrapolate: "clamp" });
-      const editorTools = [["Depth", "layers"], ["Crop", "crop"], ["Clock", "schedule"], ["Parallax", "3d_rotation"], ["Effects", "auto_awesome"]];
+      const editorTools = [["Depth", "layers"], ["Adjust", "tune"], ["Clock", "schedule"], ["Parallax", "3d_rotation"], ["Effects", "auto_awesome"]];
       return (
         <View onLayout={e => { const h = e.nativeEvent.layout.height; setEditorLayout(l => l.pageH === h ? l : { ...l, pageH: h }); }} style={[s.editorPage, { backgroundColor: sharedTransition ? "transparent" : C.bg }]}>
           <View style={[s.editorHeader, sharedTransition && { opacity: 0 }]}>
