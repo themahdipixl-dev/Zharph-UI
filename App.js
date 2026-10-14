@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing, useWindowDimensions } from "react-native";
+import { View, Text, ScrollView, Pressable, Image, StyleSheet, StatusBar, Animated, Easing, useWindowDimensions, BackHandler } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
@@ -538,6 +538,43 @@ export default function App() {
   const [filter, setFilter] = useState("All");
   const [gridColumns, setGridColumns] = useState(2);
   const [userImages, setUserImages] = useState([]);
+  const handleEditorBack = () => {
+    if (editorToolsExitRunning.current) return;
+    const last = lastEditorTransition.current;
+    if (!last?.target) {
+      animateEditorClock(true).start();
+      setTab("Home");
+      return;
+    }
+    editorToolsExitRunning.current = true;
+    animateEditorClock(true).start();
+    transitionX.setValue(last.target.x);
+    transitionY.setValue(last.target.y);
+    transitionW.setValue(last.target.width);
+    transitionH.setValue(last.target.height);
+    transitionRadius.setValue(28);
+    transitionBorderWidth.setValue(1);
+    editorBackOpacity.setValue(1);
+    editorBackY.setValue(0);
+    editorTitleOpacity.setValue(1);
+    editorTitleY.setValue(0);
+    editorApplyOpacity.setValue(1);
+    editorApplyY.setValue(0);
+    transitionBgOpacity.setValue(1);
+    transitionBgScale.setValue(1);
+    setSharedTransition({ uri: last.uri, start: last.start, closing: true });
+    setTab("Home");
+  };
+
+  useEffect(() => {
+    if (tab !== "Editor") return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleEditorBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [tab]);
+
   const renderPage = (pageTab, pointerEvents = "auto") => {
     if (pageTab === "Editor") {
       const previewWidth = Math.max(160, Math.min(windowWidth - 44, 315, (windowHeight - 255) * 9 / 19.5));
@@ -546,33 +583,7 @@ export default function App() {
       return (
         <View style={[s.editorPage, { backgroundColor: sharedTransition ? "transparent" : C.bg }]}>
           <View style={[s.editorHeader, sharedTransition && { opacity: 0 }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => {
-              if (editorToolsExitRunning.current) return;
-              const last = lastEditorTransition.current;
-              if (!last?.target) {
-                animateEditorClock(true).start();
-                setTab("Home");
-                return;
-              }
-              editorToolsExitRunning.current = true;
-              animateEditorClock(true).start();
-              transitionX.setValue(last.target.x);
-              transitionY.setValue(last.target.y);
-              transitionW.setValue(last.target.width);
-              transitionH.setValue(last.target.height);
-              transitionRadius.setValue(28);
-              transitionBorderWidth.setValue(1);
-              editorBackOpacity.setValue(1);
-              editorBackY.setValue(0);
-              editorTitleOpacity.setValue(1);
-              editorTitleY.setValue(0);
-              editorApplyOpacity.setValue(1);
-              editorApplyY.setValue(0);
-              transitionBgOpacity.setValue(1);
-              transitionBgScale.setValue(1);
-              setSharedTransition({ uri: last.uri, start: last.start, closing: true });
-              setTab("Home");
-            }} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={handleEditorBack} style={s.editorBack}><GoogleSymbol name="arrow_back" size={25} color={C.text} /></Pressable>
             <Text style={s.editorTitle}>Edit wallpaper</Text>
             <Pressable style={s.applyButton} onPress={() => {}}><Text style={s.applyText}>Apply</Text></Pressable>
           </View>
