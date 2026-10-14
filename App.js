@@ -568,11 +568,13 @@ export default function App() {
 
   const [exitHintVisible, setExitHintVisible] = useState(false);
   const exitBackTimeout = useRef(null);
+  const handleEditorBackRef = useRef(handleEditorBack);
+  handleEditorBackRef.current = handleEditorBack;
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (tab === "Editor") {
-        handleEditorBack();
+        handleEditorBackRef.current();
         return true;
       }
 
