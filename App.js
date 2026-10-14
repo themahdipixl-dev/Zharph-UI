@@ -568,8 +568,27 @@ export default function App() {
 
   const [exitHintVisible, setExitHintVisible] = useState(false);
   const exitBackTimeout = useRef(null);
+  const exitHintProgress = useRef(new Animated.Value(0)).current;
+  const exitHintOpacity = useRef(new Animated.Value(0)).current;
   const handleEditorBackRef = useRef(handleEditorBack);
   handleEditorBackRef.current = handleEditorBack;
+
+  useEffect(() => {
+    exitHintOpacity.stopAnimation();
+    Animated.timing(exitHintOpacity, {
+      toValue: exitHintVisible ? 1 : 0,
+      duration: exitHintVisible ? 110 : 170,
+      useNativeDriver: true
+    }).start();
+
+    exitHintProgress.stopAnimation();
+    Animated.spring(exitHintProgress, {
+      toValue: exitHintVisible ? 1 : 0,
+      speed: 16,
+      bounciness: 14,
+      useNativeDriver: true
+    }).start();
+  }, [exitHintVisible, exitHintProgress, exitHintOpacity]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -757,7 +776,7 @@ export default function App() {
             </Pressable>;
           })}
         </Animated.View>
-        {exitHintVisible && tab === "Home" && navTab === "Home" && !addPopupVisible && <View pointerEvents="none" style={s.exitHint}><Text style={s.exitHintText}>Press back again to exit</Text></View>}
+        {exitHintVisible && tab === "Home" && navTab === "Home" && !addPopupVisible && <Animated.View pointerEvents="none" style={[s.exitHint, { opacity: exitHintOpacity, transform: [{ translateY: exitHintProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) }, { scaleX: exitHintProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) }, { scaleY: exitHintProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.72, 0.94, 1] }) }] }]}><Text style={s.exitHintText}>Press back again to exit</Text></Animated.View>}
         {popupMounted && tab !== "Editor" && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
