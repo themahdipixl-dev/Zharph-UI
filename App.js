@@ -146,13 +146,13 @@ export default function App() {
     Animated.parallel([
       Animated.timing(scale, {
         toValue: 0.86,
-        duration: 90,
+        duration: 55,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true
       }),
       Animated.timing(opacity, {
         toValue: 0.68,
-        duration: 90,
+        duration: 55,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true
       })
@@ -167,13 +167,13 @@ export default function App() {
     Animated.parallel([
       Animated.spring(scale, {
         toValue: 1,
-        speed: 22,
+        speed: 30,
         bounciness: 5,
         useNativeDriver: true
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 180,
+        duration: 110,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true
       })
