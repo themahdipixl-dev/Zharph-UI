@@ -567,6 +567,7 @@ export default function App() {
   };
 
   const [exitHintVisible, setExitHintVisible] = useState(false);
+  const [exitHintMounted, setExitHintMounted] = useState(false);
   const exitBackTimeout = useRef(null);
   const exitHintProgress = useRef(new Animated.Value(0)).current;
   const exitHintOpacity = useRef(new Animated.Value(0)).current;
@@ -574,20 +575,44 @@ export default function App() {
   handleEditorBackRef.current = handleEditorBack;
 
   useEffect(() => {
+    if (exitHintVisible) {
+      setExitHintMounted(true);
+      exitHintOpacity.stopAnimation();
+      exitHintProgress.stopAnimation();
+      exitHintOpacity.setValue(0);
+      exitHintProgress.setValue(0);
+
+      Animated.timing(exitHintOpacity, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true
+      }).start();
+
+      Animated.spring(exitHintProgress, {
+        toValue: 1,
+        speed: 16,
+        bounciness: 14,
+        useNativeDriver: true
+      }).start();
+      return;
+    }
+
     exitHintOpacity.stopAnimation();
     Animated.timing(exitHintOpacity, {
-      toValue: exitHintVisible ? 1 : 0,
-      duration: exitHintVisible ? 110 : 170,
+      toValue: 0,
+      duration: 170,
       useNativeDriver: true
     }).start();
 
     exitHintProgress.stopAnimation();
     Animated.spring(exitHintProgress, {
-      toValue: exitHintVisible ? 1 : 0,
+      toValue: 0,
       speed: 16,
       bounciness: 14,
       useNativeDriver: true
-    }).start();
+    }).start(({ finished }) => {
+      if (finished) setExitHintMounted(false);
+    });
   }, [exitHintVisible, exitHintProgress, exitHintOpacity]);
 
   useEffect(() => {
@@ -776,7 +801,7 @@ export default function App() {
             </Pressable>;
           })}
         </Animated.View>
-        {exitHintVisible && tab === "Home" && navTab === "Home" && !addPopupVisible && <Animated.View pointerEvents="none" style={[s.exitHint, { opacity: exitHintOpacity, transform: [{ translateY: exitHintProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) }, { scaleX: exitHintProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) }, { scaleY: exitHintProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.72, 0.94, 1] }) }] }]}><Text style={s.exitHintText}>Press back again to exit</Text></Animated.View>}
+        {exitHintMounted && tab === "Home" && navTab === "Home" && !addPopupVisible && <Animated.View pointerEvents="none" style={[s.exitHint, { opacity: exitHintOpacity, transform: [{ translateY: exitHintProgress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [18, -3, 0] }) }, { scaleX: exitHintProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.82, 1.08, 1] }) }, { scaleY: exitHintProgress.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0.72, 0.94, 1] }) }] }]}><Text style={s.exitHintText}>Press back again to exit</Text></Animated.View>}
         {popupMounted && tab !== "Editor" && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
