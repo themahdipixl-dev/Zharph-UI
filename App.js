@@ -151,21 +151,21 @@ export default function App() {
     return Animated.parallel([
       Animated.timing(clockOpacity, {
         toValue: closing ? 0 : 1,
-        duration: closing ? 150 : 260,
+        duration: closing ? 75 : 260,
         delay: closing ? 0 : 170,
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
       }),
       Animated.timing(clockTranslateY, {
-        toValue: closing ? -10 : 0,
-        duration: closing ? 150 : 320,
+        toValue: closing ? -18 : 0,
+        duration: closing ? 105 : 320,
         delay: closing ? 0 : 170,
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
       }),
       Animated.timing(clockScale, {
-        toValue: closing ? 0.96 : 1,
-        duration: closing ? 150 : 320,
+        toValue: closing ? 0.88 : 1,
+        duration: closing ? 105 : 320,
         delay: closing ? 0 : 170,
         easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
         useNativeDriver: true
