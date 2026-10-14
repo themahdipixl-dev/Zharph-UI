@@ -84,7 +84,15 @@ export default function App() {
       setSelectedWallpaper(wallpaper);
       setActiveEditorTool("Depth");
       setTab("Editor");
-      requestAnimationFrame(() => buildEditorToolsMotion(false).start());
+      clockOpacity.setValue(0);
+      clockTranslateY.setValue(14);
+      clockScale.setValue(0.94);
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          buildEditorToolsMotion(false),
+          animateEditorClock(false)
+        ]).start();
+      });
       return;
     }
     cardRef.current.measureInWindow((cardX, cardY, cardW, cardH) => {
@@ -108,7 +116,15 @@ export default function App() {
         editorApplyY.setValue(-12);
         transitionBgOpacity.setValue(0);
         transitionBgScale.setValue(1.04);
+        clockOpacity.setValue(0);
+        clockTranslateY.setValue(14);
+        clockScale.setValue(0.94);
         setTab("Editor");
+        setTimeout(() => {
+          if (lastEditorTransition.current?.uri === wallpaper.uri) {
+            animateEditorClock(false).start();
+          }
+        }, 170);
       });
     });
   };
@@ -125,6 +141,37 @@ export default function App() {
     translateY: new Animated.Value(22)
   }))).current;
   const editorToolsExitRunning = useRef(false);
+  const clockOpacity = useRef(new Animated.Value(0)).current;
+  const clockTranslateY = useRef(new Animated.Value(14)).current;
+  const clockScale = useRef(new Animated.Value(0.94)).current;
+  const animateEditorClock = useCallback((closing = false) => {
+    clockOpacity.stopAnimation();
+    clockTranslateY.stopAnimation();
+    clockScale.stopAnimation();
+    return Animated.parallel([
+      Animated.timing(clockOpacity, {
+        toValue: closing ? 0 : 1,
+        duration: closing ? 150 : 260,
+        delay: closing ? 0 : 170,
+        easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }),
+      Animated.timing(clockTranslateY, {
+        toValue: closing ? -10 : 0,
+        duration: closing ? 150 : 320,
+        delay: closing ? 0 : 170,
+        easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }),
+      Animated.timing(clockScale, {
+        toValue: closing ? 0.96 : 1,
+        duration: closing ? 150 : 320,
+        delay: closing ? 0 : 170,
+        easing: closing ? Easing.in(Easing.cubic) : Easing.out(Easing.cubic),
+        useNativeDriver: true
+      })
+    ]);
+  }, [clockOpacity, clockTranslateY, clockScale]);
   const buildEditorToolsMotion = useCallback((closing = false) => {
     const allMotion = editorToolMotion.concat(editorToolsHeaderMotion);
     allMotion.forEach((motion) => {
@@ -459,8 +506,13 @@ export default function App() {
             <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => {
               if (editorToolsExitRunning.current) return;
               const last = lastEditorTransition.current;
-              if (!last?.target) { setTab("Home"); return; }
+              if (!last?.target) {
+                animateEditorClock(true).start();
+                setTab("Home");
+                return;
+              }
               editorToolsExitRunning.current = true;
+              animateEditorClock(true).start();
               transitionX.setValue(last.target.x);
               transitionY.setValue(last.target.y);
               transitionW.setValue(last.target.width);
@@ -484,10 +536,13 @@ export default function App() {
           <View style={s.previewStage}>
             <View ref={previewTargetRef} collapsable={false} style={[s.phonePreview, { width: previewWidth, height: previewHeight, opacity: sharedTransition ? 0 : 1 }]}>
               <Image source={{ uri: selectedWallpaper.uri }} style={s.previewImage} resizeMode="cover" />
-              <View pointerEvents="none" style={s.previewClock}>
+              <Animated.View pointerEvents="none" style={[s.previewClock, {
+                opacity: clockOpacity,
+                transform: [{ translateY: clockTranslateY }, { scale: clockScale }]
+              }]}>
                 <Text style={s.previewDate}>MONDAY, OCTOBER 12</Text>
                 <Text style={[s.previewTime,{fontSize:Math.min(windowWidth*0.19,68),lineHeight:Math.min(windowWidth*0.2,72)}]}>9:41</Text>
-              </View>
+              </Animated.View>
             </View>
           </View>
           <View style={s.editorToolsHeader}>
