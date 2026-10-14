@@ -566,14 +566,51 @@ export default function App() {
     setTab("Home");
   };
 
+  const [exitHintVisible, setExitHintVisible] = useState(false);
+  const exitBackTimeout = useRef(null);
+
   useEffect(() => {
-    if (tab !== "Editor") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      handleEditorBack();
+      if (tab === "Editor") {
+        handleEditorBack();
+        return true;
+      }
+
+      if (tab !== "Home" || navTab !== "Home") {
+        setAddPopupVisible(false);
+        setPopupMounted(false);
+        setTab("Home");
+        setNavTab("Home");
+        setExitHintVisible(false);
+        if (exitBackTimeout.current) {
+          clearTimeout(exitBackTimeout.current);
+          exitBackTimeout.current = null;
+        }
+        return true;
+      }
+
+      if (exitBackTimeout.current) {
+        clearTimeout(exitBackTimeout.current);
+        exitBackTimeout.current = null;
+        setExitHintVisible(false);
+        return false;
+      }
+
+      setExitHintVisible(true);
+      exitBackTimeout.current = setTimeout(() => {
+        exitBackTimeout.current = null;
+        setExitHintVisible(false);
+      }, 2000);
       return true;
     });
-    return () => subscription.remove();
-  }, [tab]);
+    return () => {
+      subscription.remove();
+      if (exitBackTimeout.current) {
+        clearTimeout(exitBackTimeout.current);
+        exitBackTimeout.current = null;
+      }
+    };
+  }, [tab, navTab]);
 
   const renderPage = (pageTab, pointerEvents = "auto") => {
     if (pageTab === "Editor") {
@@ -718,6 +755,7 @@ export default function App() {
             </Pressable>;
           })}
         </Animated.View>
+        {exitHintVisible && tab === "Home" && navTab === "Home" && !addPopupVisible && <View pointerEvents="none" style={s.exitHint}><Text style={s.exitHintText}>Press back again to exit</Text></View>}
         {popupMounted && tab !== "Editor" && <>
           <Animated.View pointerEvents={addPopupVisible ? "auto" : "none"} style={[s.popupDismiss, {
             opacity: popupOpacity
@@ -747,6 +785,6 @@ const s=StyleSheet.create({
  stickyFilters:{position:"relative",flexDirection:"row",alignItems:"center",backgroundColor:C.bg,paddingTop:2,paddingBottom:8,marginTop:-12,marginHorizontal:-20,paddingHorizontal:20,paddingRight:45,gap:8,zIndex:2,elevation:2},stickyFilterBackdrop:{position:"absolute",left:"100%",top:0,bottom:0,width:0,backgroundColor:C.bg,zIndex:1},
  stickyFilterIcon:{position:"absolute",right:-33,top:2,width:42,height:42,alignItems:"center",justifyContent:"center",zIndex:2,transform:[{translateX:3},{translateY:-4}]},filterFade:{position:"absolute",right:0,top:0,bottom:0,width:10,zIndex:1},filterFadeLeft:{position:"absolute",left:0,top:0,bottom:0,width:10,zIndex:1},filterScroller:{flex:1,minWidth:0},filters:{gap:8,paddingBottom:8,paddingRight:15},filter:{borderRadius:18,paddingHorizontal:17,paddingVertical:9,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline},filterOn:{backgroundColor:C.primary,borderColor:C.primary},filterText:{color:C.muted,fontSize:12,fontWeight:"600"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"flex-start",columnGap:"3.8%",rowGap:14},gridTwoColumns:{columnGap:0,justifyContent:"space-between"},card:{width:"30.8%",marginBottom:2},cardTwoColumns:{width:"48%"},photo:{width:"100%",aspectRatio:0.5,borderRadius:16,backgroundColor:C.surface2},
-editorPage:{flex:1,backgroundColor:"transparent",paddingHorizontal:20,paddingTop:8,paddingBottom:12},editorHeader:{height:48,flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:4},editorBack:{width:42,height:42,alignItems:"flex-start",justifyContent:"center"},editorTitle:{color:C.text,fontSize:19,fontWeight:"700",flex:1,marginLeft:4,transform:[{translateY:-2}]},applyButton:{paddingHorizontal:17,paddingVertical:10,borderRadius:20,backgroundColor:C.primary},applyText:{color:C.onPrimary,fontSize:13,fontWeight:"700",transform:[{translateY:-2}]},previewStage:{flex:1,minHeight:0,alignItems:"center",justifyContent:"center",paddingVertical:8},phonePreview:{borderRadius:28,overflow:"hidden",backgroundColor:C.surface2,borderWidth:1,borderColor:C.outline,elevation:0,shadowOpacity:0,shadowRadius:0,shadowOffset:{width:0,height:0}},previewImage:{...StyleSheet.absoluteFillObject,width:"100%",height:"100%"},previewClock:{position:"absolute",top:"17%",left:0,right:0,alignItems:"center"},previewDate:{color:"rgba(255,255,255,0.9)",fontSize:9,fontWeight:"700",letterSpacing:1.4,marginBottom:6},previewTime:{color:"#FFFFFF",fontSize:68,fontWeight:"300",letterSpacing:-3,lineHeight:72},editorToolsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginTop:8,marginBottom:12},editorSectionTitle:{color:C.text,fontSize:17,fontWeight:"700"},editorWallpaperName:{color:C.muted,fontSize:12,flexShrink:1,marginLeft:12},editorTools:{flexDirection:"row",justifyContent:"space-between",gap:6},editorTool:{width:"100%",height:68,flexGrow:0,flexShrink:0,minWidth:0,borderRadius:15,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline,alignItems:"center",justifyContent:"center",gap:5},editorToolActive:{backgroundColor:C.primary,borderColor:C.primary},editorToolLabel:{color:C.muted,fontSize:10,fontWeight:"600"},editorToolLabelActive:{color:C.onPrimary},popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,overflow:"hidden"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},bar:{position:"absolute",left:16,right:16,bottom:8,zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
+editorPage:{flex:1,backgroundColor:"transparent",paddingHorizontal:20,paddingTop:8,paddingBottom:12},editorHeader:{height:48,flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:4},editorBack:{width:42,height:42,alignItems:"flex-start",justifyContent:"center"},editorTitle:{color:C.text,fontSize:19,fontWeight:"700",flex:1,marginLeft:4,transform:[{translateY:-2}]},applyButton:{paddingHorizontal:17,paddingVertical:10,borderRadius:20,backgroundColor:C.primary},applyText:{color:C.onPrimary,fontSize:13,fontWeight:"700",transform:[{translateY:-2}]},previewStage:{flex:1,minHeight:0,alignItems:"center",justifyContent:"center",paddingVertical:8},phonePreview:{borderRadius:28,overflow:"hidden",backgroundColor:C.surface2,borderWidth:1,borderColor:C.outline,elevation:0,shadowOpacity:0,shadowRadius:0,shadowOffset:{width:0,height:0}},previewImage:{...StyleSheet.absoluteFillObject,width:"100%",height:"100%"},previewClock:{position:"absolute",top:"17%",left:0,right:0,alignItems:"center"},previewDate:{color:"rgba(255,255,255,0.9)",fontSize:9,fontWeight:"700",letterSpacing:1.4,marginBottom:6},previewTime:{color:"#FFFFFF",fontSize:68,fontWeight:"300",letterSpacing:-3,lineHeight:72},editorToolsHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginTop:8,marginBottom:12},editorSectionTitle:{color:C.text,fontSize:17,fontWeight:"700"},editorWallpaperName:{color:C.muted,fontSize:12,flexShrink:1,marginLeft:12},editorTools:{flexDirection:"row",justifyContent:"space-between",gap:6},editorTool:{width:"100%",height:68,flexGrow:0,flexShrink:0,minWidth:0,borderRadius:15,backgroundColor:C.surface,borderWidth:1,borderColor:C.outline,alignItems:"center",justifyContent:"center",gap:5},editorToolActive:{backgroundColor:C.primary,borderColor:C.primary},editorToolLabel:{color:C.muted,fontSize:10,fontWeight:"600"},editorToolLabelActive:{color:C.onPrimary},popupDismiss:{...StyleSheet.absoluteFillObject,zIndex:3,overflow:"hidden"},addPopup:{position:"absolute",alignSelf:"center",bottom:92,zIndex:5,alignItems:"center",justifyContent:"center",backgroundColor:C.primary,borderRadius:22,paddingHorizontal:20,paddingVertical:14,elevation:8,shadowColor:"#000",shadowOpacity:0.25,shadowRadius:12,shadowOffset:{width:0,height:5}},addPopupAction:{justifyContent:"center",alignItems:"center"},addPopupText:{color:C.onPrimary,fontSize:14,fontWeight:"700"},exitHint:{position:"absolute",alignSelf:"center",bottom:94,zIndex:6,backgroundColor:C.surface2,borderRadius:24,paddingHorizontal:18,paddingVertical:12,borderWidth:1,borderColor:C.outline,elevation:6},exitHintText:{color:C.text,fontSize:13,fontWeight:"600"},bar:{position:"absolute",left:16,right:16,bottom:8,zIndex:4,flexDirection:"row",alignItems:"center",backgroundColor:C.surface,borderRadius:36,paddingHorizontal:8,paddingVertical:8,borderWidth:1,borderColor:C.outline},tab:{flex:1,alignItems:"center",justifyContent:"center",alignSelf:"stretch",zIndex:1},pill:{width:54,height:54,borderRadius:27,alignItems:"center",justifyContent:"center"},liquidIndicator:{position:"absolute",top:8,width:54,height:54,borderRadius:27,backgroundColor:C.primary,zIndex:0},
  placeholder:{minHeight:420,alignItems:"center",justifyContent:"center",paddingHorizontal:24},bigIcon:{width:76,height:76,borderRadius:26,backgroundColor:C.surface2,alignItems:"center",justifyContent:"center",marginBottom:20},placeholderText:{color:C.muted,fontSize:14,textAlign:"center",lineHeight:21,marginTop:10},primaryButton:{marginTop:24,backgroundColor:C.primary,paddingHorizontal:22,paddingVertical:12,borderRadius:22},primaryText:{color:C.onPrimary,fontWeight:"700"}
 });
